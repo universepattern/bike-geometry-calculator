@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bike Designer | Privacy-Focused Geometry Calculator</title>
+    <meta name="description" content="A privacy-focused, offline-first web application for calculating and rendering custom bicycle frame geometry.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Controls -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>Bike Designer<span>.</span></h1>
+            </div>
+
+            <div class="controls-wrapper">
+                
+                <div class="control-group">
+                    <h3>Frame & Angles</h3>
+                    
+                    <div class="input-row">
+                        <label for="seatTubeLength">Seat Tube (C-C)</label>
+                        <div class="slider-container">
+                            <input type="range" id="seatTubeLength" min="450" max="650" value="540" step="1">
+                            <span class="value-display" id="seatTubeLengthVal">540</span><span class="unit">mm</span>
+                        </div>
+                    </div>
+
+                    <div class="input-row">
+                        <label for="effTopTubeLength">Effective Top Tube</label>
+                        <div class="slider-container">
+                            <input type="range" id="effTopTubeLength" min="480" max="650" value="550" step="1">
+                            <span class="value-display" id="effTopTubeLengthVal">550</span><span class="unit">mm</span>
+                        </div>
+                    </div>
+
+                    <div class="input-row">
+                        <label for="seatTubeAngle">Seat Tube Angle</label>
+                        <div class="slider-container">
+                            <input type="range" id="seatTubeAngle" min="70" max="76" value="73" step="0.1">
+                            <span class="value-display" id="seatTubeAngleVal">73</span><span class="unit">°</span>
+                        </div>
+                    </div>
+
+                    <div class="input-row">
+                        <label for="headTubeAngle">Head Tube Angle</label>
+                        <div class="slider-container">
+                            <input type="range" id="headTubeAngle" min="68" max="75" value="73" step="0.1">
+                            <span class="value-display" id="headTubeAngleVal">73</span><span class="unit">°</span>
+                        </div>
+                    </div>
+                    
+                    <div class="input-row">
+                        <label for="chainStayLength">Chainstay Length</label>
+                        <div class="slider-container">
+                            <input type="range" id="chainStayLength" min="380" max="470" value="415" step="1">
+                            <span class="value-display" id="chainStayLengthVal">415</span><span class="unit">mm</span>
+                        </div>
+                    </div>
+
+                    <div class="input-row">
+                        <label for="bbDrop">BB Drop</label>
+                        <div class="slider-container">
+                            <input type="range" id="bbDrop" min="40" max="90" value="70" step="1">
+                            <span class="value-display" id="bbDropVal">70</span><span class="unit">mm</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>Fork & Wheels</h3>
+                    
+                    <div class="input-row">
+                        <label for="forkRake">Fork Rake (Offset)</label>
+                        <div class="slider-container">
+                            <input type="range" id="forkRake" min="30" max="60" value="43" step="1">
+                            <span class="value-display" id="forkRakeVal">43</span><span class="unit">mm</span>
+                        </div>
+                    </div>
+
+                    <div class="input-row">
+                        <label for="wheelSize">Wheel Size (BSD)</label>
+                        <select id="wheelSize">
+                            <option value="622" selected>700c (622mm)</option>
+                            <option value="584">650b (584mm)</option>
+                            <option value="559">26" (559mm)</option>
+                        </select>
+                    </div>
+
+                    <div class="input-row">
+                        <label for="tireWidth">Tire Width</label>
+                        <div class="slider-container">
+                            <input type="range" id="tireWidth" min="23" max="55" value="28" step="1">
+                            <span class="value-display" id="tireWidthVal">28</span><span class="unit">mm</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button id="exportSvgBtn" class="btn-primary">Export Technical Image</button>
+                <button id="exportDxfBtn" class="btn-primary" style="margin-top: 10px; background-color: var(--bg-panel); color: var(--accent-peach);">Export as DXF (CAD)</button>
+            </div>
+        </aside>
+
+        <!-- Visualization Canvas -->
+        <main class="canvas-area">
+            <div class="canvas-wrapper" id="canvasWrapper">
+                <!-- SVG dynamically generated here -->
+                <svg id="bikeSvg" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+                    <!-- The background rect for export -->
+                    <rect id="exportBg" width="100%" height="100%" fill="#fdfcfa" style="display:none;"></rect>
+                    <!-- The geometry will map so that origin (0,0) is BB -->
+                    <g id="bikeGroup">
+                        <g id="gridGroup"></g>
+                        <!-- Tube graphics -->
+                        <g id="tubesGroup"></g>
+                        <!-- Wheels graphic -->
+                        <g id="wheelsGroup"></g>
+                        <!-- Dimension Lines -->
+                        <g id="dimensionsGroup"></g>
+                    </g>
+                    <!-- Non-flipped overlay for text / BOM -->
+                    <g id="overlayGroup"></g>
+                </svg>
+            </div>
+            
+            <div class="info-panel">
+                <div class="info-item">
+                    <span class="info-label">Trail:</span>
+                    <span class="info-value" id="trailDisplay">0 mm</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Wheelbase:</span>
+                    <span class="info-value" id="wheelbaseDisplay">0 mm</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Stack:</span>
+                    <span class="info-value" id="stackDisplay">0 mm</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Reach:</span>
+                    <span class="info-value" id="reachDisplay">0 mm</span>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/geometry.js"></script>
+    <script src="js/renderer.js"></script>
+    <script src="js/dxf-exporter.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
