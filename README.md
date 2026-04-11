@@ -1,13 +1,13 @@
 # Bike Geometry Calculator
 
-A privacy-focused, interactive web application that dynamically renders custom bicycle frame geometry. 
+An interactive web application that dynamically renders custom bicycle frame geometry. 
 
 🌍 **[Live Demo: Run the Bike Geometry Calculator Online](https://universepattern.github.io/bike-geometry-calculator/)**
 
 ## Projects in this Suite
 
 ### 1. Interactive Geometry Calculator (Current)
-A modern, privacy-focused web application built with Vanilla JS and SVG. 
+A modern web application built with Vanilla JS and SVG. 
 - **Real-Time Visualizer**: Instantly see your bicycle frame diagram update.
 - **Interactive Highlighting**: Neon glows emphasize the linkage you are currently editing.
 - **Export Technical Plan**: Generates high-resolution PNG maps with full BOM and dimension lines.
