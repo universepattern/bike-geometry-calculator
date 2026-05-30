@@ -1,6 +1,6 @@
 /**
  * SVG Renderer for Bike Designer
- * Extended with Force Vector and Stress Heatmap Visualization
+ * Extended with Force Vector, Stress Heatmap, and Fit Suggestion Visualization
  * Handles translating calculated coordinate nodes into SVG geometry.
  */
 
@@ -26,6 +26,8 @@ class BikeRenderer {
         this.tubesGroup.innerHTML = '';
         this.wheelsGroup.innerHTML = '';
         this.dimensionsGroup.innerHTML = '';
+        const gridGroup = document.getElementById('gridGroup');
+        if (gridGroup) gridGroup.innerHTML = '';
         if(this.overlayGroup) this.overlayGroup.innerHTML = '';
         this.elementMap = {};
     }
@@ -117,8 +119,37 @@ class BikeRenderer {
     highlightPart(ids) {
         this.clearHighlights();
         if (!Array.isArray(ids)) ids = [ids];
+
+        // Maps slider input keys to registered SVG element IDs
+        const keyMap = {
+            seatTubeLength: ['tube-seat'],
+            effTopTubeLength: ['tube-top'],
+            seatTubeAngle: ['tube-seat'],
+            headTubeAngle: ['tube-head'],
+            chainStayLength: ['tube-chainstay'],
+            bbDrop: ['tube-chainstay'],
+            forkRake: ['tube-fork'],
+            wheelSize: ['wheel-rear', 'wheel-front'],
+            tireWidth: ['wheel-rear', 'wheel-front'],
+            riderWeight: ['tube-seat'],
+            saddleSetback: ['tube-seat'],
+            crankLength: ['tube-chainstay'],
+            powerOutput: ['tube-seat', 'tube-down'],
+            brakingForce: ['tube-fork', 'tube-head'],
+            frameMaterial: ['tube-seat', 'tube-down', 'tube-top']
+        };
+
+        const resolvedIds = [];
         ids.forEach(id => {
-            let targets = this.elementMap[id] || this.elementMap[`main-${id}`];
+            if (keyMap[id]) {
+                resolvedIds.push(...keyMap[id]);
+            } else {
+                resolvedIds.push(id);
+            }
+        });
+
+        resolvedIds.forEach(id => {
+            let targets = this.elementMap[`main-${id}`] || this.elementMap[id];
             if (targets) {
                 targets.forEach(el => el.classList.add('highlight-neon'));
             }
@@ -318,6 +349,47 @@ class BikeRenderer {
         this.dimensionsGroup.appendChild(groundLine);
     }
 
+    drawGrid() {
+        const gridGroup = document.getElementById('gridGroup');
+        if (!gridGroup || !this.viewBoxRect) return;
+        gridGroup.innerHTML = '';
+
+        const rect = this.viewBoxRect;
+        const step = 100; // 100mm grid increments
+
+        const startX = Math.floor(rect.x / step) * step;
+        const endX = Math.ceil((rect.x + rect.w) / step) * step;
+        
+        const topY = rect.y;
+        const botY = rect.y + rect.h;
+        
+        const mathMinY = Math.min(-topY, -botY);
+        const mathMaxY = Math.max(-topY, -botY);
+        
+        const startY = Math.floor(mathMinY / step) * step;
+        const endY = Math.ceil(mathMaxY / step) * step;
+
+        for (let x = startX; x <= endX; x += step) {
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', x);
+            line.setAttribute('y1', topY);
+            line.setAttribute('x2', x);
+            line.setAttribute('y2', botY);
+            line.setAttribute('class', x === 0 ? 'grid-axis' : 'grid-line');
+            gridGroup.appendChild(line);
+        }
+
+        for (let y = startY; y <= endY; y += step) {
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', rect.x);
+            line.setAttribute('y1', -y);
+            line.setAttribute('x2', rect.x + rect.w);
+            line.setAttribute('y2', -y);
+            line.setAttribute('class', y === 0 ? 'grid-axis' : 'grid-line');
+            gridGroup.appendChild(line);
+        }
+    }
+
     drawDimensions(nodes, params) {
         this.drawDimensionLine(nodes.eTTST, nodes.htBot, 50, `TT: ${Math.round(params.effTopTubeLength)}mm`);
         this.drawDimensionLine(nodes.bb, nodes.eTTST, 50, `ST: ${Math.round(params.seatTubeLength)}mm`);
@@ -338,37 +410,66 @@ class BikeRenderer {
         }
     }
 
-    drawOptimizationHints(stresses, stability) {
+    drawOptimizationHints(stresses, stability, fit) {
         const hints = [];
+        let yOffset = 50;
+
         if (stresses.safetyFactorSeatTube < 1.5) {
             hints.push({
                 text: "⚠️ Seat tube stress too high! Increase diameter or use stronger material.",
-                position: { x: this.viewBoxRect.x + 50, y: this.viewBoxRect.y + 50 },
+                position: { x: this.viewBoxRect.x + 50, y: this.viewBoxRect.y + yOffset },
                 color: "#ff3333"
             });
+            yOffset += 30;
         }
         if (stresses.safetyFactorDownTube < 1.5) {
             hints.push({
                 text: "⚠️ Down tube stress too high! Increase diameter or use stronger material.",
-                position: { x: this.viewBoxRect.x + 50, y: this.viewBoxRect.y + 80 },
+                position: { x: this.viewBoxRect.x + 50, y: this.viewBoxRect.y + yOffset },
                 color: "#ff3333"
             });
+            yOffset += 30;
         }
         if (stability < 5) {
             hints.push({
                 text: "⚠️ Low stability! Increase trail or wheelbase for better handling.",
-                position: { x: this.viewBoxRect.x + 50, y: this.viewBoxRect.y + 110 },
+                position: { x: this.viewBoxRect.x + 50, y: this.viewBoxRect.y + yOffset },
                 color: "#ff9900"
             });
+            yOffset += 30;
         } else if (stability > 8) {
             hints.push({
                 text: "✅ High stability! Good for touring or loaded bikes.",
-                position: { x: this.viewBoxRect.x + 50, y: this.viewBoxRect.y + 110 },
+                position: { x: this.viewBoxRect.x + 50, y: this.viewBoxRect.y + yOffset },
                 color: "#33cc33"
             });
+            yOffset += 30;
         }
+
+        // Biomechanical fit warnings
+        if (fit) {
+            if (Math.abs(fit.seatTubeDelta) > 50) {
+                const direction = fit.seatTubeDelta > 0 ? "large" : "small";
+                hints.push({
+                    text: `⚠️ Seat tube size is too ${direction} for your inseam (suggested: ${Math.round(fit.suggestedSeatTube)}mm).`,
+                    position: { x: this.viewBoxRect.x + 50, y: this.viewBoxRect.y + yOffset },
+                    color: "#ff9f43"
+                });
+                yOffset += 30;
+            }
+            if (Math.abs(fit.stackDelta) > 60) {
+                const direction = fit.stackDelta > 0 ? "high" : "low";
+                hints.push({
+                    text: `⚠️ Stack is too ${direction} for your height & riding style (suggested: ${Math.round(fit.suggestedStack)}mm).`,
+                    position: { x: this.viewBoxRect.x + 50, y: this.viewBoxRect.y + yOffset },
+                    color: "#ff9f43"
+                });
+                yOffset += 30;
+            }
+        }
+
         hints.forEach(hint => {
-            const textEl = this.createText(hint.position.x, -hint.position.y, hint.text, 'optimization-hint');
+            const textEl = this.createText(hint.position.x, -hint.position.y, hint.text, 'optimization-hint', 'start');
             textEl.setAttribute('fill', hint.color);
             this.overlayGroup.appendChild(textEl);
         });
@@ -379,6 +480,7 @@ class BikeRenderer {
         this.geometry = geometry;
         this.params = params;
         const nodes = geometry.nodes;
+        
         this.drawTubes(nodes);
         this.drawWheels(nodes, params);
         if (this.comparisonMode && this.comparisonGeometry) {
@@ -392,10 +494,14 @@ class BikeRenderer {
             this.applyStressHeatmap(geometry.stresses);
         }
         this.drawDimensions(nodes, params);
-        if (geometry.stresses && geometry.stability !== undefined) {
-            this.drawOptimizationHints(geometry.stresses, geometry.stability);
-        }
         this.updateViewBox(nodes, geometry.metrics.wheelRadius);
+        
+        // Draw grid overlay based on calculated ViewBox boundaries
+        this.drawGrid();
+        
+        if (geometry.stresses && geometry.stability !== undefined) {
+            this.drawOptimizationHints(geometry.stresses, geometry.stability, geometry.fit);
+        }
     }
 
     generateBOM() {

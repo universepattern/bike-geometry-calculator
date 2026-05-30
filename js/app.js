@@ -162,6 +162,8 @@ document.addEventListener('DOMContentLoaded', () => {
             .dimension-text { fill: #00d2ff; font-size: 13px; font-family: 'Inter', sans-serif; font-weight: 600; }
             .force-text { font-family: 'Inter', sans-serif; fill: #ffffff; font-size: 11px; font-weight: 500; }
             .optimization-hint { font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; }
+            .grid-line { stroke: rgba(255, 255, 255, 0.03); stroke-width: 1; }
+            .grid-axis { stroke: rgba(255, 255, 255, 0.07); stroke-width: 1.5; }
         `;
         svg.insertBefore(styleEl, svg.firstChild);
         const svgData = new XMLSerializer().serializeToString(svg);
@@ -204,6 +206,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 img.src = svgDataUrl;
             }, 50);
+        });
+    }
+
+    const compareBtn = document.getElementById('compareBtn');
+    if (compareBtn) {
+        compareBtn.addEventListener('click', () => {
+            if (!window.currentGeometry || !window.currentParams) return;
+            
+            renderer.toggleComparisonMode(window.currentGeometry, window.currentParams);
+            
+            if (renderer.comparisonMode) {
+                compareBtn.textContent = "Clear Reference Geometry";
+                compareBtn.style.borderColor = "var(--accent-orange)";
+                compareBtn.style.color = "var(--accent-orange)";
+            } else {
+                compareBtn.textContent = "Lock Reference Geometry";
+                compareBtn.style.borderColor = "var(--border-color)";
+                compareBtn.style.color = "var(--text-main)";
+            }
+            doRender();
         });
     }
 

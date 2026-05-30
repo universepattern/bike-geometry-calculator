@@ -1,7 +1,7 @@
 /**
  * Geometry Calculator for Bicycle Frame
- * Extended with Physics-Based Force & Torque Analysis
- * Translates geometric parameters into 2D Cartesian coordinates and calculates forces, torques, and stresses.
+ * Extended with Physics-Based Force & Torque Analysis and Rider Fit Suggestions
+ * Translates geometric parameters into 2D Cartesian coordinates and calculates forces, torques, stresses, and fit recommendations.
  * Assumes Bottom Bracket (BB) is at (0, 0) and bike faces RIGHT (+X direction).
  * Y-axis points UP (+Y).
  */
@@ -27,6 +27,11 @@ class BikeGeometry {
             powerOutput: 250,      // W
             brakingForce: 1.0,     // g (deceleration multiplier)
             frameMaterial: "steel", // steel, aluminum, carbon
+            
+            // Rider Fit parameters
+            riderHeight: 175,      // cm
+            riderInseam: 80,       // cm
+            ridingStyle: "road",   // road, mtb, touring, cargo
             ...params
         };
 
@@ -247,6 +252,43 @@ class BikeGeometry {
         return Math.min((trail / wheelbase) * 10, 10);
     }
 
+    // Calculate rider fit suggestions
+    calculateFit() {
+        const p = this.params;
+        const H = p.riderHeight * 10; // height in mm
+        const I = p.riderInseam * 10;  // inseam in mm
+        
+        // Suggested Seat Tube length (C-C) based on standard formulas (~66% of Inseam)
+        const suggestedSeatTube = I * 0.66;
+        
+        // Stack and Reach suggestions based on riding style and rider height
+        let stackFactor = 0.31;
+        let reachFactor = 0.22;
+        
+        if (p.ridingStyle === "mtb") {
+            stackFactor = 0.35;
+            reachFactor = 0.25;
+        } else if (p.ridingStyle === "touring") {
+            stackFactor = 0.33;
+            reachFactor = 0.23;
+        } else if (p.ridingStyle === "cargo") {
+            stackFactor = 0.36;
+            reachFactor = 0.21;
+        }
+        
+        const suggestedStack = H * stackFactor;
+        const suggestedReach = H * reachFactor;
+        
+        return {
+            suggestedSeatTube,
+            suggestedStack,
+            suggestedReach,
+            seatTubeDelta: p.seatTubeLength - suggestedSeatTube,
+            stackDelta: this.result.metrics.stack - suggestedStack,
+            reachDelta: this.result.metrics.reach - suggestedReach
+        };
+    }
+
     // Main calculation method
     calculate() {
         this.result = this._calculateGeometry();
@@ -255,6 +297,7 @@ class BikeGeometry {
         this.result.forces = this.calculateForces();
         this.result.stresses = this.calculateStresses();
         this.result.stability = this.calculateStability();
+        this.result.fit = this.calculateFit();
 
         return this.result;
     }
