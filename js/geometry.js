@@ -1,6 +1,7 @@
 /**
  * Geometry Calculator for Bicycle Frame
- * Translates geometric parameters into 2D Cartesian coordinates.
+ * Extended with Physics-Based Force & Torque Analysis
+ * Translates geometric parameters into 2D Cartesian coordinates and calculates forces, torques, and stresses.
  * Assumes Bottom Bracket (BB) is at (0, 0) and bike faces RIGHT (+X direction).
  * Y-axis points UP (+Y).
  */
@@ -8,6 +9,7 @@
 class BikeGeometry {
     constructor(params) {
         this.params = {
+            // Existing geometric parameters
             seatTubeLength: 540,
             effTopTubeLength: 550,
             seatTubeAngle: 73,
@@ -17,8 +19,18 @@ class BikeGeometry {
             forkRake: 43,
             wheelSize: 622, // BSD
             tireWidth: 28,
+
+            // New physics parameters
+            riderWeight: 75,       // kg
+            saddleSetback: 10,     // mm
+            crankLength: 170,      // mm
+            powerOutput: 250,      // W
+            brakingForce: 1.0,     // g (deceleration multiplier)
+            frameMaterial: "steel", // steel, aluminum, carbon
             ...params
         };
+
+        this.result = null;
     }
 
     // Convert degrees to radians
@@ -26,7 +38,8 @@ class BikeGeometry {
         return deg * (Math.PI / 180);
     }
 
-    calculate() {
+    // Calculate geometric nodes (existing logic)
+    _calculateGeometry() {
         const p = this.params;
 
         // Radii
@@ -34,94 +47,39 @@ class BikeGeometry {
         const bbDrop = p.bbDrop;
 
         // Frame Angles (Seat tube leans back, so angle is > 90 if measuring from positive X axis)
-        // Actually, let's keep it simple. If bike faces Right:
-        // Seat tube vector from BB: Angle = 180 - seatTubeAngle
         const stRad = this.degToRad(180 - p.seatTubeAngle);
         const htRad = this.degToRad(180 - p.headTubeAngle);
 
         // 1. Bottom Bracket
         const bb = { x: 0, y: 0 };
 
-        // 2. Rear Axle (Chainstay intersects with horizontal axle line)
-        // The axle line is at height = bbDrop relative to BB
+        // 2. Rear Axle
         const rearAxleY = bbDrop;
-        // chainStayLength^2 = rearAxleX^2 + (rearAxleY - 0)^2
         const rearAxleX = -Math.sqrt(Math.pow(p.chainStayLength, 2) - Math.pow(bbDrop, 2));
         const rearAxle = { x: rearAxleX, y: rearAxleY };
 
         // 3. Effective Top Tube / Seat Tube intersection (eTTST)
-        // Measured from BB along Seat Tube angle
         const eTTST = {
             x: p.seatTubeLength * Math.cos(stRad),
             y: p.seatTubeLength * Math.sin(stRad)
         };
 
         // 4. Head Tube / Top Tube intersection (HTTT)
-        // eTT is horizontal, so HTTT is just eTT length to the right of eTTST
         const htTT = {
             x: eTTST.x + p.effTopTubeLength,
             y: eTTST.y
         };
 
-        // 5. Front Axle Setup
-        // The steering axis passes through htTT with angle htRad
-        // We know trail and rake behavior, but we can compute front axle
-        // based on fork length / headset or simpler math.
-        // To simplify, we calculate where the steering axis hits the axle height level.
-        // Axle level is Y = bbDrop
-        // Steering axis equation: Y - htTT.y = tan(htRad) * (X - htTT.x)
-        // at Y = bbDrop => bbDrop - htTT.y = tan(htRad) * (X - htTT.x)
-        const steerAxisAxleIntersectX = htTT.x + (bbDrop - htTT.y) / Math.tan(htRad);
-        
-        // The front axle is offset perpendicular to the steer axis by forkRake.
-        // Steer axis angle is htRad. Perpendicular forward is htRad - 90 deg.
-        const perpRad = htRad - Math.PI / 2;
-        const frontAxle = {
-            x: steerAxisAxleIntersectX + p.forkRake * Math.cos(perpRad),
-            y: bbDrop + p.forkRake * Math.sin(perpRad) // this should equal bbDrop if forkRake is exact horizontal offset?
-            // Actually, fork rake is perpendicular offset from steer axis.
-            // Let's refine:
-        };
-
-        // Wait, standard fork rake offset shifts the axle line strictly perpendicular.
-        // Let's re-calculate: The steering axis intersects the wheel radius height.
-        // In most bike geometries, front axle height is same as rear axle height = bbDrop.
-        // Let's just fix front axle Y to bbDrop and shift X by Rake / sin(headAngle).
-        // Since rake is perpendicular distance, horizontal shift is Rake / sin(HTAngle).
-        // If headTubeAngle is e.g. 73 deg (from horizontal)
+        // 5. Front Axle
         const htAngleReal = this.degToRad(p.headTubeAngle); // 73 degrees
+        const steerAxisAxleIntersectX = htTT.x + (bbDrop - htTT.y) / Math.tan(htRad);
         const frontAxleX = steerAxisAxleIntersectX + (p.forkRake / Math.sin(htAngleReal));
-
         const exactFrontAxle = {
             x: frontAxleX,
             y: bbDrop
         };
 
-        // 6. Head Tube Bottom & Top (Assume standard lengths since we don't have fork length as input, 
-        // we'll calculate a standard head tube bounding based on typical fork lengths if not provided, 
-        // or we'll just extend a bit below and above htTT).
-        // For visualization purpose, let's use a standard 380mm axle-to-crown fork.
-        const forkA2C = 380; 
-        const lowerHeadsetStack = 15;
-        const forkTotalYOffset = forkA2C + lowerHeadsetStack;
-        // Find point on steer axis that is distance `forkTotalYOffset` from axle along the axis
-        // Actually, fork length is taken along the steering axis.
-        const headTubeBottom = {
-            x: exactFrontAxle.x - p.forkRake * Math.cos(perpRad) - forkTotalYOffset * Math.cos(htRad),
-            y: exactFrontAxle.y - p.forkRake * Math.sin(perpRad) - forkTotalYOffset * Math.sin(htRad)
-        };
-        // wait, going UP the steerer tube means adding to y and reducing x (since htRad is obtuse)
-        // htRad is 107 deg. cos is negative, sin is positive.
-        // going UP means negative distance? No, positive distance.
-        // let's do:
-        const htBottom = {
-            x: exactFrontAxle.x - p.forkRake * Math.cos(perpRad) + forkTotalYOffset * Math.cos(this.degToRad(p.headTubeAngle)),
-            // above is wrong. Lets project from exactFrontAxle backwards.
-        };
-
-        // SIMPLER FORK/HEADTUBE APPROACH:
-        // We know htTT. We know steer axis angle (htRad).
-        // Let's just make the Head Tube go 20mm above htTT, and down to standard fork length.
+        // 6. Head Tube Top & Bottom
         const htLength = 150;
         const htTop = {
             x: htTT.x + 20 * Math.cos(htRad),
@@ -132,18 +90,11 @@ class BikeGeometry {
             y: htTop.y - htLength * Math.sin(htRad)
         };
 
-
-        // 7. Calculate Down Tube intersection at BB and HT
-        // It connects BB to htBot roughly.
-        
         // Wheelbase & Trail
         const wheelbase = exactFrontAxle.x - rearAxle.x;
-        // Trail = (R * cos(H) - Offset) / sin(H)
         const trail = (wheelRadius * Math.cos(htAngleReal) - p.forkRake) / Math.sin(htAngleReal);
 
         // Stack and Reach
-        // Reach is X dist from BB to Top center of Head Tube
-        // Stack is Y dist from BB to Top center of Head Tube
         const reach = htTop.x - bb.x;
         const stack = htTop.y - bb.y;
 
@@ -166,7 +117,148 @@ class BikeGeometry {
             }
         };
     }
+
+    // Calculate forces and torques
+    calculateForces() {
+        const p = this.params;
+        const g = 9.81; // m/s²
+        const nodes = this.result.nodes;
+        const metrics = this.result.metrics;
+
+        // Rider forces (60% rear, 40% front)
+        const rearForce = p.riderWeight * 0.6 * g;
+        const frontForce = p.riderWeight * 0.4 * g;
+
+        // Pedaling torque (simplified: P = τ * ω => τ = P / ω)
+        // Assume cadence = 60 RPM (1 rotation per second)
+        const cadence = 60; // RPM
+        const angularVelocity = (2 * Math.PI * cadence) / 60; // rad/s
+        const torque_BB = (p.powerOutput / angularVelocity) * 1000; // Convert to Nm (since power is in Watts)
+
+        // Braking force (deceleration)
+        const deceleration = p.brakingForce * g;
+        const brakingForceFront = frontForce + (p.riderWeight * deceleration * (metrics.wheelbase - metrics.trail) / metrics.wheelbase);
+        const brakingForceRear = rearForce - (p.riderWeight * deceleration * metrics.trail / metrics.wheelbase);
+
+        // Seat tube compressive force (rider weight + pedaling)
+        const seatTubeForce = rearForce + (torque_BB / (p.crankLength / 1000));
+
+        // Head tube force (braking)
+        const headTubeForce = brakingForceFront;
+
+        return {
+            bbTorque: torque_BB,
+            seatTubeForce: seatTubeForce,
+            headTubeForce: headTubeForce,
+            rearForce: rearForce,
+            frontForce: frontForce,
+            brakingForceFront: brakingForceFront,
+            brakingForceRear: brakingForceRear,
+        };
+    }
+
+    // Calculate stresses using beam theory
+    calculateStresses() {
+        const forces = this.calculateForces();
+        const p = this.params;
+
+        // Material properties (yield strength in MPa, Young's modulus in Pa)
+        const materialProps = {
+            steel: { yieldStrength: 250, youngsModulus: 200e9, name: "Steel" },
+            aluminum: { yieldStrength: 200, youngsModulus: 70e9, name: "Aluminum" },
+            carbon: { yieldStrength: 500, youngsModulus: 150e9, name: "Carbon" },
+        };
+
+        const props = materialProps[p.frameMaterial] || materialProps.steel;
+
+        // Assume tube dimensions (could be made configurable later)
+        const tubeDimensions = {
+            seatTube: { outerDiameter: 30, wallThickness: 2 }, // mm
+            downTube: { outerDiameter: 35, wallThickness: 2 },
+            topTube: { outerDiameter: 28, wallThickness: 1.5 },
+            headTube: { outerDiameter: 40, wallThickness: 3 },
+            chainstay: { outerDiameter: 25, wallThickness: 1.5 },
+            seatstay: { outerDiameter: 20, wallThickness: 1.2 },
+        };
+
+        // Helper function to calculate moment of inertia for a hollow tube
+        const calculateMomentOfInertia = (outerDiameter, wallThickness) => {
+            const outerRadius = (outerDiameter / 2) / 1000; // Convert to meters
+            const innerRadius = (outerDiameter / 2 - wallThickness) / 1000;
+            return (Math.PI / 4) * (Math.pow(outerRadius, 4) - Math.pow(innerRadius, 4));
+        };
+
+        // Helper function to calculate stress (σ = (M * y) / I)
+        const calculateBendingStress = (force, length, outerDiameter, wallThickness) => {
+            const M = force * (length / 1000); // Bending moment in Nm (length converted to meters)
+            const I = calculateMomentOfInertia(outerDiameter, wallThickness); // m^4
+            const y = (outerDiameter / 2) / 1000; // Outer radius in meters
+            const stress = (M * y) / I; // Stress in Pascals (N/m²)
+            return stress / 1e6; // Convert to MPa
+        };
+
+        // Calculate stresses for each tube
+        const seatTubeLength = p.seatTubeLength / 1000; // Convert to meters
+        const seatTubeStress = calculateBendingStress(
+            forces.seatTubeForce,
+            seatTubeLength * 1000, // Convert back to mm for consistency
+            tubeDimensions.seatTube.outerDiameter,
+            tubeDimensions.seatTube.wallThickness
+        );
+
+        const downTubeLength = Math.hypot(
+            this.result.nodes.htBot.x - this.result.nodes.bb.x,
+            this.result.nodes.htBot.y - this.result.nodes.bb.y
+        ) / 1000; // Convert to meters
+        const downTubeForce = forces.headTubeForce * 0.7; // Approximate distribution
+        const downTubeStress = calculateBendingStress(
+            downTubeForce,
+            downTubeLength * 1000,
+            tubeDimensions.downTube.outerDiameter,
+            tubeDimensions.downTube.wallThickness
+        );
+
+        const topTubeLength = p.effTopTubeLength / 1000;
+        const topTubeForce = forces.seatTubeForce * 0.3; // Approximate distribution
+        const topTubeStress = calculateBendingStress(
+            topTubeForce,
+            topTubeLength * 1000,
+            tubeDimensions.topTube.outerDiameter,
+            tubeDimensions.topTube.wallThickness
+        );
+
+        return {
+            seatTubeStress: seatTubeStress,
+            downTubeStress: downTubeStress,
+            topTubeStress: topTubeStress,
+            materialYield: props.yieldStrength,
+            materialName: props.name,
+            safetyFactorSeatTube: props.yieldStrength / seatTubeStress,
+            safetyFactorDownTube: props.yieldStrength / downTubeStress,
+            safetyFactorTopTube: props.yieldStrength / topTubeStress,
+        };
+    }
+
+    // Calculate stability score (0-10)
+    calculateStability() {
+        const trail = this.result.metrics.trail;
+        const wheelbase = this.result.metrics.wheelbase;
+        // Stability score: higher trail and longer wheelbase = more stable
+        return Math.min((trail / wheelbase) * 10, 10);
+    }
+
+    // Main calculation method
+    calculate() {
+        this.result = this._calculateGeometry();
+
+        // Add physics calculations
+        this.result.forces = this.calculateForces();
+        this.result.stresses = this.calculateStresses();
+        this.result.stability = this.calculateStability();
+
+        return this.result;
+    }
 }
 
-// Export for use in other scope if needed, or attach to window
+// Export for use in other scope
 window.BikeGeometry = BikeGeometry;

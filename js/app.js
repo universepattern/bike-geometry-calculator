@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const renderer = new window.BikeRenderer('bikeSvg');
     
     const inputs = {
+        // Geometric parameters
         seatTubeLength: document.getElementById('seatTubeLength'),
         effTopTubeLength: document.getElementById('effTopTubeLength'),
         seatTubeAngle: document.getElementById('seatTubeAngle'),
@@ -20,18 +21,49 @@ document.addEventListener('DOMContentLoaded', () => {
         bbDrop: document.getElementById('bbDrop'),
         forkRake: document.getElementById('forkRake'),
         wheelSize: document.getElementById('wheelSize'),
-        tireWidth: document.getElementById('tireWidth')
+        tireWidth: document.getElementById('tireWidth'),
+        
+        // Physics & Material parameters
+        riderWeight: document.getElementById('riderWeight'),
+        saddleSetback: document.getElementById('saddleSetback'),
+        crankLength: document.getElementById('crankLength'),
+        powerOutput: document.getElementById('powerOutput'),
+        brakingForce: document.getElementById('brakingForce'),
+        frameMaterial: document.getElementById('frameMaterial'),
+        
+        // Rider Fit parameters
+        riderHeight: document.getElementById('riderHeight'),
+        riderInseam: document.getElementById('riderInseam'),
+        ridingStyle: document.getElementById('ridingStyle')
     };
 
-    const trailDisplay = document.getElementById('trailDisplay');
-    const wheelbaseDisplay = document.getElementById('wheelbaseDisplay');
-    const stackDisplay = document.getElementById('stackDisplay');
-    const reachDisplay = document.getElementById('reachDisplay');
+    const displays = {
+        trail: document.getElementById('trailDisplay'),
+        wheelbase: document.getElementById('wheelbaseDisplay'),
+        stack: document.getElementById('stackDisplay'),
+        reach: document.getElementById('reachDisplay'),
+        bbTorque: document.getElementById('bbTorqueDisplay'),
+        seatTubeStress: document.getElementById('seatTubeStressDisplay'),
+        headTubeForce: document.getElementById('headTubeForceDisplay'),
+        safetyFactor: document.getElementById('safetyFactorDisplay'),
+        stability: document.getElementById('stabilityScoreDisplay')
+    };
 
     function updateParams() {
         const params = {};
         for (const [key, el] of Object.entries(inputs)) {
-            params[key] = parseFloat(el.value);
+            if (!el) continue;
+            
+            // Check if select or input range
+            if (el.tagName === 'SELECT') {
+                // If it's a number (like wheelSize), parse it, otherwise keep string
+                const numVal = parseFloat(el.value);
+                params[key] = isNaN(numVal) ? el.value : numVal;
+            } else {
+                params[key] = parseFloat(el.value);
+            }
+            
+            // Update the slider value badge if it exists
             const valLabel = document.getElementById(`${key}Val`);
             if (valLabel) valLabel.textContent = el.value;
         }
@@ -49,16 +81,57 @@ document.addEventListener('DOMContentLoaded', () => {
         window.currentGeometry = result;
         window.currentParams = params;
 
+        // Update the info panel metrics
         if (result.metrics) {
-            trailDisplay.textContent = `${Math.round(result.metrics.trail)} mm`;
-            wheelbaseDisplay.textContent = `${Math.round(result.metrics.wheelbase)} mm`;
-            stackDisplay.textContent = `${Math.round(result.metrics.stack)} mm`;
-            reachDisplay.textContent = `${Math.round(result.metrics.reach)} mm`;
+            displays.trail.textContent = `${Math.round(result.metrics.trail)} mm`;
+            displays.wheelbase.textContent = `${Math.round(result.metrics.wheelbase)} mm`;
+            displays.stack.textContent = `${Math.round(result.metrics.stack)} mm`;
+            displays.reach.textContent = `${Math.round(result.metrics.reach)} mm`;
+        }
+        
+        if (result.forces) {
+            displays.bbTorque.textContent = `${Math.round(result.forces.bbTorque)} Nm`;
+            displays.headTubeForce.textContent = `${Math.round(result.forces.headTubeForce)} N`;
+        }
+        
+        if (result.stresses) {
+            displays.seatTubeStress.textContent = `${Math.round(result.stresses.seatTubeStress)} MPa`;
+            
+            // Safety factor shows the minimum safety factor of the tubes
+            const minSafety = Math.min(
+                result.stresses.safetyFactorSeatTube,
+                result.stresses.safetyFactorDownTube,
+                result.stresses.safetyFactorTopTube
+            );
+            displays.safetyFactor.textContent = minSafety > 100 ? '>100' : minSafety.toFixed(2);
+            
+            // Apply warning coloring if safety factor is low
+            if (minSafety < 1.5) {
+                displays.safetyFactor.style.color = '#ff4d4d';
+            } else if (minSafety < 3.0) {
+                displays.safetyFactor.style.color = '#ff9f43';
+            } else {
+                displays.safetyFactor.style.color = '#2ed573';
+            }
+        }
+        
+        if (result.stability !== undefined) {
+            displays.stability.textContent = `${result.stability.toFixed(1)}/10`;
+            
+            if (result.stability < 5.0) {
+                displays.stability.style.color = '#ff9f43';
+            } else {
+                displays.stability.style.color = '#2ed573';
+            }
         }
     }
 
+    // Attach listeners
     for (const [key, el] of Object.entries(inputs)) {
+        if (!el) continue;
+        
         el.addEventListener('input', doRender);
+        el.addEventListener('change', doRender);
         
         const row = el.closest('.input-row');
         if (row) {
@@ -77,16 +150,18 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const styleEl = document.createElementNS('http://www.w3.org/2000/svg', 'style');
         styleEl.textContent = `
-            .tube-outline { stroke: #2c2927; stroke-width: 25px; stroke-linecap: round; stroke-linejoin: round; fill: none; opacity: 0.8; }
-            .tube-inner { stroke: #e8e4d9; stroke-width: 21px; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-            .wheel { stroke: #d1ccc0; stroke-width: 3px; fill: none; }
-            .wheel-tire { stroke: rgba(0, 0, 0, 0.08); stroke-width: 28px; fill: none; }
-            .dimension-line { stroke: #d35400; stroke-width: 1px; stroke-dasharray: 4 4; }
-            .node-point { fill: #d35400; r: 4; }
-            .technical-text { font-family: 'Inter', sans-serif; fill: #2c2927; font-size: 14px; }
-            .bom-bg { fill: #ffffff; stroke: #d1ccc0; stroke-width: 2px; }
-            .bom-title { font-family: 'Outfit', sans-serif; font-weight: 800; fill: #2c2927; font-size: 20px; }
-            .dimension-text { fill: #d35400; font-size: 14px; font-family: 'Inter', sans-serif; font-weight: 600; }
+            .tube-outline { stroke: #030712; stroke-width: 25px; stroke-linecap: round; stroke-linejoin: round; fill: none; opacity: 0.6; }
+            .tube-inner { stroke: #334155; stroke-width: 20px; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+            .wheel { stroke: rgba(255, 255, 255, 0.1); stroke-width: 3px; fill: none; }
+            .wheel-tire { stroke: rgba(255, 255, 255, 0.03); stroke-width: 28px; fill: none; }
+            .dimension-line { stroke: #00d2ff; stroke-width: 1px; stroke-dasharray: 4 4; }
+            .node-point { fill: #00d2ff; r: 4; }
+            .technical-text { font-family: 'Inter', sans-serif; fill: #e2e8f0; font-size: 13px; }
+            .bom-bg { fill: rgba(15, 23, 42, 0.85); stroke: rgba(255, 255, 255, 0.1); stroke-width: 1.5px; }
+            .bom-title { font-family: 'Outfit', sans-serif; font-weight: 800; fill: #ffffff; font-size: 18px; }
+            .dimension-text { fill: #00d2ff; font-size: 13px; font-family: 'Inter', sans-serif; font-weight: 600; }
+            .force-text { font-family: 'Inter', sans-serif; fill: #ffffff; font-size: 11px; font-weight: 500; }
+            .optimization-hint { font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; }
         `;
         svg.insertBefore(styleEl, svg.firstChild);
         const svgData = new XMLSerializer().serializeToString(svg);
@@ -145,6 +220,44 @@ document.addEventListener('DOMContentLoaded', () => {
             const a = document.createElement("a");
             a.href = url;
             a.download = "bike_technical_drawing.dxf";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
+    }
+
+    const exportStlBtn = document.getElementById('exportStlBtn');
+    if(exportStlBtn) {
+        exportStlBtn.addEventListener('click', () => {
+            if(!window.currentGeometry || !window.currentParams) return;
+            
+            const exporter = new window.BikeSTLExporter(window.currentGeometry, window.currentParams);
+            const stlContent = exporter.generate();
+            
+            const blob = new Blob([stlContent], {type: "text/plain"});
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "bike_frame_3d.stl";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
+    }
+
+    const exportCsvBtn = document.getElementById('exportCsvBtn');
+    if(exportCsvBtn) {
+        exportCsvBtn.addEventListener('click', () => {
+            if(!window.currentGeometry || !window.currentParams) return;
+            
+            const exporter = new window.BikeCSVExporter(window.currentGeometry, window.currentParams);
+            const csvContent = exporter.generate();
+            
+            const blob = new Blob([csvContent], {type: "text/csv;charset=utf-8;"});
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "bike_specs_report.csv";
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);

@@ -1,5 +1,6 @@
 /**
  * SVG Renderer for Bike Designer
+ * Extended with Force Vector and Stress Heatmap Visualization
  * Handles translating calculated coordinate nodes into SVG geometry.
  */
 
@@ -12,10 +13,13 @@ class BikeRenderer {
         this.bikeGroup = document.getElementById('bikeGroup');
         this.overlayGroup = document.getElementById('overlayGroup');
         this.exportBg = document.getElementById('exportBg');
-        
+
         // Flip Y-axis so positive Y is Up (Math coordinates)
         this.bikeGroup.setAttribute('transform', 'scale(1, -1)');
         this.elementMap = {};
+        this.comparisonMode = false;
+        this.comparisonGeometry = null;
+        this.comparisonParams = null;
     }
 
     clear() {
@@ -65,6 +69,25 @@ class BikeRenderer {
         return text;
     }
 
+    createArrow(start, end, color = "#ff0000", id = null) {
+        const dx = end.x - start.x;
+        const dy = end.y - start.y;
+        const angle = Math.atan2(dy, dx);
+        const headLength = 10;
+        const arrowPath = `M ${start.x} ${start.y} L ${end.x} ${end.y} L ${end.x - headLength * Math.cos(angle - Math.PI / 6)} ${end.y - headLength * Math.sin(angle - Math.PI / 6)} M ${end.x} ${end.y} L ${end.x - headLength * Math.cos(angle + Math.PI / 6)} ${end.y - headLength * Math.sin(angle + Math.PI / 6)}`;
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', arrowPath);
+        path.setAttribute('stroke', color);
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke-width', '2');
+        if (id) {
+            path.setAttribute('data-id', id);
+            if (!this.elementMap[id]) this.elementMap[id] = [];
+            this.elementMap[id].push(path);
+        }
+        return path;
+    }
+
     updateViewBox(nodes, radius) {
         let minX = Math.min(nodes.rearAxle.x - radius, nodes.bb.x, nodes.htTop.x - 100);
         let maxX = Math.max(nodes.frontAxle.x + radius, nodes.htTop.x + 100);
@@ -82,7 +105,7 @@ class BikeRenderer {
 
         this.svg.setAttribute('viewBox', `${minX} ${-maxY} ${width} ${height}`);
         this.viewBoxRect = { x: minX, y: -maxY, w: width, h: height };
-        
+
         if (this.exportBg) {
             this.exportBg.setAttribute('x', minX);
             this.exportBg.setAttribute('y', -maxY);
@@ -95,7 +118,7 @@ class BikeRenderer {
         this.clearHighlights();
         if (!Array.isArray(ids)) ids = [ids];
         ids.forEach(id => {
-            let targets = this.elementMap[id];
+            let targets = this.elementMap[id] || this.elementMap[`main-${id}`];
             if (targets) {
                 targets.forEach(el => el.classList.add('highlight-neon'));
             }
@@ -114,7 +137,7 @@ class BikeRenderer {
         if (len === 0) return;
         let nx = -dy / len;
         let ny = dx / len;
-        
+
         if (invertOffset) {
             nx = -nx; ny = -ny;
         }
@@ -127,32 +150,32 @@ class BikeRenderer {
         this.dimensionsGroup.appendChild(this.createLine(p1, {x: ox1, y: oy1}, 'dimension-line'));
         this.dimensionsGroup.appendChild(this.createLine(p2, {x: ox2, y: oy2}, 'dimension-line'));
         this.dimensionsGroup.appendChild(this.createLine({x: ox1, y: oy1}, {x: ox2, y: oy2}, 'dimension-line'));
-        
+
         const midX = (ox1 + ox2) / 2;
         const midY = (oy1 + oy2) / 2;
         const tx = midX + nx * 15;
-        const ty = -(midY + ny * 15 - 5); 
+        const ty = -(midY + ny * 15 - 5);
         this.overlayGroup.appendChild(this.createText(tx, ty, textStr, 'dimension-text'));
     }
 
     drawAngleDimension(center, startAngleDeg, endAngleDeg, radius, textStr) {
         const startRad = startAngleDeg * Math.PI / 180;
         const endRad = endAngleDeg * Math.PI / 180;
-        
+
         const x1 = center.x + radius * Math.cos(startRad);
         const y1 = center.y + radius * Math.sin(startRad);
         const x2 = center.x + radius * Math.cos(endRad);
         const y2 = center.y + radius * Math.sin(endRad);
-        
+
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         const largeArc = Math.abs(endAngleDeg - startAngleDeg) > 180 ? 1 : 0;
         const sweep = endAngleDeg > startAngleDeg ? 1 : 0;
-        
+
         path.setAttribute('d', `M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} ${sweep} ${x2} ${y2}`);
         path.setAttribute('class', 'dimension-line');
         path.setAttribute('fill', 'none');
         this.dimensionsGroup.appendChild(path);
-        
+
         const midDeg = (startAngleDeg + endAngleDeg) / 2;
         const midRad = midDeg * Math.PI / 180;
         const tx = center.x + (radius + 20) * Math.cos(midRad);
@@ -160,15 +183,91 @@ class BikeRenderer {
         this.overlayGroup.appendChild(this.createText(tx, ty, textStr, 'dimension-text'));
     }
 
-    render(geometry, params) {
-        this.clear();
-        this.geometry = geometry;
-        this.params = params;
-        const nodes = geometry.nodes;
-        
+    drawForceVectors(nodes, forces) {
+        this.drawRotationalForce(nodes.bb, forces.bbTorque, "bbTorque");
+        this.drawLinearForce(nodes.bb, nodes.eTTST, forces.seatTubeForce, "#ff3333", "seatTubeForce");
+        this.drawLinearForce(nodes.htBot, { x: nodes.htBot.x, y: nodes.htBot.y - 50 }, forces.headTubeForce, "#3399ff", "headTubeForce");
+        this.drawLinearForce(nodes.rearAxle, { x: nodes.rearAxle.x, y: nodes.rearAxle.y - forces.rearForce / 10 }, forces.rearForce, "#27ae60", "rearForce");
+        this.drawLinearForce(nodes.frontAxle, { x: nodes.frontAxle.x, y: nodes.frontAxle.y - forces.frontForce / 10 }, forces.frontForce, "#1abc9c", "frontForce");
+    }
+
+    drawLinearForce(start, end, magnitude, color, id) {
+        const arrow = this.createArrow(start, end, color, id);
+        this.tubesGroup.appendChild(arrow);
+        const mid = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+        this.overlayGroup.appendChild(this.createText(mid.x, -mid.y, `${Math.round(magnitude)} N`, "force-text"));
+    }
+
+    drawRotationalForce(center, torque, id) {
+        const radius = 30;
+        const startAngle = torque > 0 ? 0 : 180;
+        const endAngle = torque > 0 ? 90 : 270;
+        const startRad = startAngle * Math.PI / 180;
+        const endRad = endAngle * Math.PI / 180;
+        const x1 = center.x + radius * Math.cos(startRad);
+        const y1 = center.y + radius * Math.sin(startRad);
+        const x2 = center.x + radius * Math.cos(endRad);
+        const y2 = center.y + radius * Math.sin(endRad);
+        const arrow = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        const largeArc = Math.abs(endAngle - startAngle) > 180 ? 1 : 0;
+        const sweep = endAngle > startAngle ? 1 : 0;
+        arrow.setAttribute("d", `M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} ${sweep} ${x2} ${y2}`);
+        arrow.setAttribute("stroke", "#ff8800");
+        arrow.setAttribute("stroke-width", "3");
+        arrow.setAttribute("fill", "none");
+        arrow.setAttribute("data-id", id);
+        this.tubesGroup.appendChild(arrow);
+        this.overlayGroup.appendChild(this.createText(center.x + radius + 10, -center.y, `${Math.round(torque)} Nm`, "force-text"));
+    }
+
+    applyStressHeatmap(stresses) {
+        const maxStress = 500;
+        const seatTubeStress = Math.min(stresses.seatTubeStress, maxStress);
+        const seatTubeNormalized = seatTubeStress / maxStress;
+        const seatTubeColor = this.getStressColor(seatTubeNormalized);
+        this.applyColorToTube("tube-seat", seatTubeColor);
+
+        const downTubeStress = Math.min(stresses.downTubeStress, maxStress);
+        const downTubeNormalized = downTubeStress / maxStress;
+        const downTubeColor = this.getStressColor(downTubeNormalized);
+        this.applyColorToTube("tube-down", downTubeColor);
+
+        const topTubeStress = Math.min(stresses.topTubeStress, maxStress);
+        const topTubeNormalized = topTubeStress / maxStress;
+        const topTubeColor = this.getStressColor(topTubeNormalized);
+        this.applyColorToTube("tube-top", topTubeColor);
+    }
+
+    getStressColor(normalizedStress) {
+        const red = Math.floor(255 * normalizedStress);
+        const green = Math.floor(255 * (1 - normalizedStress));
+        return `rgb(${red}, ${green}, 0)`;
+    }
+
+    applyColorToTube(tubeId, color) {
+        const tubeElements = this.elementMap[`main-${tubeId}`] || this.elementMap[tubeId];
+        if (tubeElements) {
+            tubeElements.forEach(el => {
+                if (el.classList.contains("tube-inner")) {
+                    el.setAttribute("stroke", color);
+                }
+            });
+        }
+    }
+
+    drawTubes(nodes, isComparison = false) {
+        const groupId = isComparison ? 'comparison' : 'main';
         const drawTube = (p1, p2, id) => {
-            this.tubesGroup.appendChild(this.createLine(p1, p2, 'tube-outline', id));
-            this.tubesGroup.appendChild(this.createLine(p1, p2, 'tube-inner', id));
+            const line1 = this.createLine(p1, p2, 'tube-outline', `${groupId}-${id}`);
+            const line2 = this.createLine(p1, p2, 'tube-inner', `${groupId}-${id}`);
+            if (isComparison) {
+                line1.setAttribute('stroke-dasharray', '5,5');
+                line2.setAttribute('stroke-dasharray', '5,5');
+                line1.setAttribute('opacity', '0.7');
+                line2.setAttribute('opacity', '0.7');
+            }
+            this.tubesGroup.appendChild(line1);
+            this.tubesGroup.appendChild(line2);
         };
 
         drawTube(nodes.eTTST, nodes.htBot, 'tube-top');
@@ -180,55 +279,140 @@ class BikeRenderer {
         drawTube(nodes.htBot, nodes.frontAxle, 'tube-fork');
 
         for (const [key, node] of Object.entries(nodes)) {
-            this.tubesGroup.appendChild(this.createCircle(node, 3, 'node-point'));
+            const circle = this.createCircle(node, 3, 'node-point', `${groupId}-${key}`);
+            if (isComparison) {
+                circle.setAttribute('opacity', '0.7');
+            }
+            this.tubesGroup.appendChild(circle);
         }
+    }
 
-        const r = geometry.metrics.wheelRadius;
-        this.wheelsGroup.appendChild(this.createCircle(nodes.rearAxle, r, 'wheel', 'wheel-rear'));
-        this.wheelsGroup.appendChild(this.createCircle(nodes.rearAxle, r - params.tireWidth, 'wheel-tire', 'wheel-rear'));
-        
-        this.wheelsGroup.appendChild(this.createCircle(nodes.frontAxle, r, 'wheel', 'wheel-front'));
-        this.wheelsGroup.appendChild(this.createCircle(nodes.frontAxle, r - params.tireWidth, 'wheel-tire', 'wheel-front'));
+    drawWheels(nodes, params, isComparison = false) {
+        const r = this.geometry.metrics.wheelRadius;
+        const groupId = isComparison ? 'comparison' : 'main';
+        const wheel1 = this.createCircle(nodes.rearAxle, r, 'wheel', `${groupId}-wheel-rear`);
+        const tire1 = this.createCircle(nodes.rearAxle, r - params.tireWidth, 'wheel-tire', `${groupId}-wheel-rear`);
+        const wheel2 = this.createCircle(nodes.frontAxle, r, 'wheel', `${groupId}-wheel-front`);
+        const tire2 = this.createCircle(nodes.frontAxle, r - params.tireWidth, 'wheel-tire', `${groupId}-wheel-front`);
+        if (isComparison) {
+            [wheel1, tire1, wheel2, tire2].forEach(el => {
+                el.setAttribute('stroke-dasharray', '5,5');
+                el.setAttribute('opacity', '0.7');
+            });
+        }
+        this.wheelsGroup.appendChild(wheel1);
+        this.wheelsGroup.appendChild(tire1);
+        this.wheelsGroup.appendChild(wheel2);
+        this.wheelsGroup.appendChild(tire2);
 
         const groundY = nodes.rearAxle.y - r;
-        this.dimensionsGroup.appendChild(this.createLine(
+        const groundLine = this.createLine(
             {x: nodes.rearAxle.x - r - 50, y: groundY},
             {x: nodes.frontAxle.x + r + 50, y: groundY},
             'dimension-line'
-        ));
+        );
+        if (isComparison) {
+            groundLine.setAttribute('stroke-dasharray', '5,5');
+            groundLine.setAttribute('opacity', '0.7');
+        }
+        this.dimensionsGroup.appendChild(groundLine);
+    }
 
+    drawDimensions(nodes, params) {
         this.drawDimensionLine(nodes.eTTST, nodes.htBot, 50, `TT: ${Math.round(params.effTopTubeLength)}mm`);
         this.drawDimensionLine(nodes.bb, nodes.eTTST, 50, `ST: ${Math.round(params.seatTubeLength)}mm`);
         this.drawDimensionLine(nodes.bb, nodes.rearAxle, 60, `CS: ${Math.round(params.chainStayLength)}mm`, true);
-
-        // Angle Labels
         this.drawAngleDimension(nodes.bb, 0, 180 - params.seatTubeAngle, 80, `STA: ${params.seatTubeAngle}°`);
-        
-        // HT angle needs a horizontal reference at htBot
         this.dimensionsGroup.appendChild(this.createLine(nodes.htBot, {x: nodes.htBot.x + 100, y: nodes.htBot.y}, 'dimension-line'));
         this.drawAngleDimension(nodes.htBot, 0, 180 - params.headTubeAngle, 80, `HTA: ${params.headTubeAngle}°`);
-
-        this.updateViewBox(nodes, r);
     }
-    
+
+    toggleComparisonMode(geometry, params) {
+        this.comparisonMode = !this.comparisonMode;
+        if (this.comparisonMode) {
+            this.comparisonGeometry = geometry;
+            this.comparisonParams = params;
+        } else {
+            this.comparisonGeometry = null;
+            this.comparisonParams = null;
+        }
+    }
+
+    drawOptimizationHints(stresses, stability) {
+        const hints = [];
+        if (stresses.safetyFactorSeatTube < 1.5) {
+            hints.push({
+                text: "⚠️ Seat tube stress too high! Increase diameter or use stronger material.",
+                position: { x: this.viewBoxRect.x + 50, y: this.viewBoxRect.y + 50 },
+                color: "#ff3333"
+            });
+        }
+        if (stresses.safetyFactorDownTube < 1.5) {
+            hints.push({
+                text: "⚠️ Down tube stress too high! Increase diameter or use stronger material.",
+                position: { x: this.viewBoxRect.x + 50, y: this.viewBoxRect.y + 80 },
+                color: "#ff3333"
+            });
+        }
+        if (stability < 5) {
+            hints.push({
+                text: "⚠️ Low stability! Increase trail or wheelbase for better handling.",
+                position: { x: this.viewBoxRect.x + 50, y: this.viewBoxRect.y + 110 },
+                color: "#ff9900"
+            });
+        } else if (stability > 8) {
+            hints.push({
+                text: "✅ High stability! Good for touring or loaded bikes.",
+                position: { x: this.viewBoxRect.x + 50, y: this.viewBoxRect.y + 110 },
+                color: "#33cc33"
+            });
+        }
+        hints.forEach(hint => {
+            const textEl = this.createText(hint.position.x, -hint.position.y, hint.text, 'optimization-hint');
+            textEl.setAttribute('fill', hint.color);
+            this.overlayGroup.appendChild(textEl);
+        });
+    }
+
+    render(geometry, params) {
+        this.clear();
+        this.geometry = geometry;
+        this.params = params;
+        const nodes = geometry.nodes;
+        this.drawTubes(nodes);
+        this.drawWheels(nodes, params);
+        if (this.comparisonMode && this.comparisonGeometry) {
+            this.drawTubes(this.comparisonGeometry.nodes, true);
+            this.drawWheels(this.comparisonGeometry.nodes, this.comparisonParams, true);
+        }
+        if (geometry.forces) {
+            this.drawForceVectors(nodes, geometry.forces);
+        }
+        if (geometry.stresses) {
+            this.applyStressHeatmap(geometry.stresses);
+        }
+        this.drawDimensions(nodes, params);
+        if (geometry.stresses && geometry.stability !== undefined) {
+            this.drawOptimizationHints(geometry.stresses, geometry.stability);
+        }
+        this.updateViewBox(nodes, geometry.metrics.wheelRadius);
+    }
+
     generateBOM() {
         if(!this.geometry || !this.params || !this.viewBoxRect) return;
-
         const x = this.viewBoxRect.x + 40;
         const svgY = this.viewBoxRect.y + 40;
-        
         const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         rect.setAttribute('x', x);
-        rect.setAttribute('y', svgY); 
+        rect.setAttribute('y', svgY);
         rect.setAttribute('width', 220);
         rect.setAttribute('height', 310);
         rect.setAttribute('rx', 8);
         rect.setAttribute('class', 'bom-bg');
         this.overlayGroup.appendChild(rect);
-
         this.overlayGroup.appendChild(this.createText(x + 20, svgY + 35, "BIKE DESIGNER", 'bom-title', 'start'));
         this.overlayGroup.appendChild(this.createText(x + 20, svgY + 60, "Technical Plan", 'technical-text', 'start'));
-        
+
         const metrics = [
             `Seat Tube: ${this.params.seatTubeLength}mm`,
             `Top Tube: ${this.params.effTopTubeLength}mm`,

@@ -3,14 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bike Designer | Bicycle Geometry Calculator</title>
-    <meta name="description" content="An offline-first web application for calculating and rendering custom bicycle frame geometry.">
-    
+    <title>Bike Designer | Bicycle Geometry Calculator with Physics</title>
+    <meta name="description" content="An offline-first web application for calculating and rendering custom bicycle frame geometry with physics-based force and stress analysis.">
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+
+    <!-- Stylesheet -->
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -22,10 +23,11 @@
             </div>
 
             <div class="controls-wrapper">
-                
+
+                <!-- Frame & Angles -->
                 <div class="control-group">
                     <h3>Frame & Angles</h3>
-                    
+
                     <div class="input-row">
                         <label for="seatTubeLength">Seat Tube (C-C)</label>
                         <div class="slider-container">
@@ -57,7 +59,7 @@
                             <span class="value-display" id="headTubeAngleVal">73</span><span class="unit">°</span>
                         </div>
                     </div>
-                    
+
                     <div class="input-row">
                         <label for="chainStayLength">Chainstay Length</label>
                         <div class="slider-container">
@@ -75,9 +77,10 @@
                     </div>
                 </div>
 
+                <!-- Fork & Wheels -->
                 <div class="control-group">
                     <h3>Fork & Wheels</h3>
-                    
+
                     <div class="input-row">
                         <label for="forkRake">Fork Rake (Offset)</label>
                         <div class="slider-container">
@@ -103,11 +106,103 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Rider & Load -->
+                <div class="control-group">
+                    <h3>Rider & Load</h3>
+
+                    <div class="input-row">
+                        <label for="riderWeight">Rider Weight</label>
+                        <div class="slider-container">
+                            <input type="range" id="riderWeight" min="50" max="150" value="75" step="1">
+                            <span class="value-display" id="riderWeightVal">75</span><span class="unit">kg</span>
+                        </div>
+                    </div>
+
+                    <div class="input-row">
+                        <label for="saddleSetback">Saddle Setback</label>
+                        <div class="slider-container">
+                            <input type="range" id="saddleSetback" min="0" max="50" value="10" step="1">
+                            <span class="value-display" id="saddleSetbackVal">10</span><span class="unit">mm</span>
+                        </div>
+                    </div>
+
+                    <div class="input-row">
+                        <label for="crankLength">Crank Length</label>
+                        <div class="slider-container">
+                            <input type="range" id="crankLength" min="160" max="180" value="170" step="1">
+                            <span class="value-display" id="crankLengthVal">170</span><span class="unit">mm</span>
+                        </div>
+                    </div>
+
+                    <div class="input-row">
+                        <label for="powerOutput">Power Output</label>
+                        <div class="slider-container">
+                            <input type="range" id="powerOutput" min="100" max="1000" value="250" step="10">
+                            <span class="value-display" id="powerOutputVal">250</span><span class="unit">W</span>
+                        </div>
+                    </div>
+
+                    <div class="input-row">
+                        <label for="brakingForce">Braking Force</label>
+                        <div class="slider-container">
+                            <input type="range" id="brakingForce" min="0.1" max="2.0" value="1.0" step="0.1">
+                            <span class="value-display" id="brakingForceVal">1.0</span><span class="unit">g</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Frame Material -->
+                <div class="control-group">
+                    <h3>Frame Material</h3>
+
+                    <div class="input-row">
+                        <label for="frameMaterial">Material</label>
+                        <select id="frameMaterial">
+                            <option value="steel" selected>Steel (Yield: 250 MPa)</option>
+                            <option value="aluminum">Aluminum (Yield: 200 MPa)</option>
+                            <option value="carbon">Carbon (Yield: 500 MPa)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Rider Fit -->
+                <div class="control-group">
+                    <h3>Rider Fit</h3>
+
+                    <div class="input-row">
+                        <label for="riderHeight">Rider Height</label>
+                        <div class="slider-container">
+                            <input type="range" id="riderHeight" min="150" max="200" value="175" step="1">
+                            <span class="value-display" id="riderHeightVal">175</span><span class="unit">cm</span>
+                        </div>
+                    </div>
+
+                    <div class="input-row">
+                        <label for="riderInseam">Inseam</label>
+                        <div class="slider-container">
+                            <input type="range" id="riderInseam" min="70" max="90" value="80" step="1">
+                            <span class="value-display" id="riderInseamVal">80</span><span class="unit">cm</span>
+                        </div>
+                    </div>
+
+                    <div class="input-row">
+                        <label for="ridingStyle">Riding Style</label>
+                        <select id="ridingStyle">
+                            <option value="road" selected>Road</option>
+                            <option value="mtb">Mountain Bike</option>
+                            <option value="touring">Touring</option>
+                            <option value="cargo">Cargo</option>
+                        </select>
+                    </div>
+                </div>
             </div>
 
             <div class="actions">
                 <button id="exportSvgBtn" class="btn-primary">Export Technical Image</button>
-                <button id="exportDxfBtn" class="btn-primary" style="margin-top: 10px; background-color: var(--bg-panel); color: var(--accent-peach);">Export as DXF (CAD)</button>
+                <button id="exportDxfBtn" class="btn-secondary">Export as DXF (CAD)</button>
+                <button id="exportStlBtn" class="btn-secondary">Export as STL (3D Print)</button>
+                <button id="exportCsvBtn" class="btn-secondary">Export Specs (CSV)</button>
             </div>
         </aside>
 
@@ -117,7 +212,7 @@
                 <!-- SVG dynamically generated here -->
                 <svg id="bikeSvg" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
                     <!-- The background rect for export -->
-                    <rect id="exportBg" width="100%" height="100%" fill="#fdfcfa" style="display:none;"></rect>
+                    <rect id="exportBg" width="100%" height="100%" fill="#111625" style="display:none;"></rect>
                     <!-- The geometry will map so that origin (0,0) is BB -->
                     <g id="bikeGroup">
                         <g id="gridGroup"></g>
@@ -132,23 +227,44 @@
                     <g id="overlayGroup"></g>
                 </svg>
             </div>
-            
+
+            <!-- Info Panel -->
             <div class="info-panel">
                 <div class="info-item">
-                    <span class="info-label">Trail:</span>
+                    <span class="info-label">Trail</span>
                     <span class="info-value" id="trailDisplay">0 mm</span>
                 </div>
                 <div class="info-item">
-                    <span class="info-label">Wheelbase:</span>
+                    <span class="info-label">Wheelbase</span>
                     <span class="info-value" id="wheelbaseDisplay">0 mm</span>
                 </div>
                 <div class="info-item">
-                    <span class="info-label">Stack:</span>
+                    <span class="info-label">Stack</span>
                     <span class="info-value" id="stackDisplay">0 mm</span>
                 </div>
                 <div class="info-item">
-                    <span class="info-label">Reach:</span>
+                    <span class="info-label">Reach</span>
                     <span class="info-value" id="reachDisplay">0 mm</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">BB Torque</span>
+                    <span class="info-value" id="bbTorqueDisplay">0 Nm</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">ST Stress</span>
+                    <span class="info-value" id="seatTubeStressDisplay">0 MPa</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">HT Force</span>
+                    <span class="info-value" id="headTubeForceDisplay">0 N</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Safety Factor</span>
+                    <span class="info-value" id="safetyFactorDisplay">0</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Stability</span>
+                    <span class="info-value" id="stabilityScoreDisplay">0/10</span>
                 </div>
             </div>
         </main>
@@ -158,6 +274,8 @@
     <script src="js/geometry.js"></script>
     <script src="js/renderer.js"></script>
     <script src="js/dxf-exporter.js"></script>
+    <script src="js/stl-exporter.js"></script>
+    <script src="js/csv-exporter.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>
