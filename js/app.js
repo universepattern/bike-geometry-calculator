@@ -15,6 +15,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof window.BikeRenderer3D !== 'undefined') {
         renderer3d = new window.BikeRenderer3D('canvas3dWrapper');
     }
+
+    // Initialize Accordion Panels
+    const controlGroups = document.querySelectorAll('.control-group');
+    controlGroups.forEach((group, index) => {
+        // Collapse all groups by default except the first one ("Frame & Angles")
+        if (index > 0) {
+            group.classList.add('collapsed');
+        }
+        
+        const header = group.querySelector('.group-header');
+        if (header) {
+            header.addEventListener('click', () => {
+                group.classList.toggle('collapsed');
+            });
+        }
+    });
     
     const inputs = {
         // Geometric parameters
@@ -288,19 +304,33 @@ document.addEventListener('DOMContentLoaded', () => {
     const exportStlBtn = document.getElementById('exportStlBtn');
     if(exportStlBtn) {
         exportStlBtn.addEventListener('click', () => {
-            if(!window.currentGeometry || !window.currentParams) return;
-            
-            const exporter = new window.BikeSTLExporter(window.currentGeometry, window.currentParams);
-            const stlContent = exporter.generate();
-            
-            const blob = new Blob([stlContent], {type: "text/plain"});
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = "bike_frame_3d.stl";
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            if(renderer3d) {
+                renderer3d.exportSTL();
+            } else {
+                if(!window.currentGeometry || !window.currentParams) return;
+                const exporter = new window.BikeSTLExporter(window.currentGeometry, window.currentParams);
+                const stlContent = exporter.generate();
+                
+                const blob = new Blob([stlContent], {type: "text/plain"});
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "bike_frame_3d.stl";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }
+        });
+    }
+
+    const exportGltfBtn = document.getElementById('exportGltfBtn');
+    if(exportGltfBtn) {
+        exportGltfBtn.addEventListener('click', () => {
+            if(renderer3d) {
+                renderer3d.exportGLTF();
+            } else {
+                alert("3D Viewport is not initialized.");
+            }
         });
     }
 

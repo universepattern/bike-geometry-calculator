@@ -408,6 +408,62 @@ class BikeRenderer3D {
         const bikeMidY = (nodes.htTop.y + nodes.bb.y) / 2;
         this.controls.target.set(bikeMidX, bikeMidY, 0);
     }
+
+    exportGLTF() {
+        if (typeof THREE.GLTFExporter === 'undefined') {
+            console.error("GLTFExporter is not loaded.");
+            alert("GLTF Exporter is not loaded yet. Please check your internet connection.");
+            return;
+        }
+
+        const exportGroup = new THREE.Group();
+        exportGroup.name = "bicycle_3d_model";
+        
+        this.meshes.forEach(mesh => {
+            const clone = mesh.clone();
+            exportGroup.add(clone);
+        });
+
+        const exporter = new THREE.GLTFExporter();
+        exporter.parse(exportGroup, (gltf) => {
+            const output = JSON.stringify(gltf, null, 2);
+            this.downloadFile(output, "application/json", "bike_geometry_model.gltf");
+        }, (error) => {
+            console.error("An error occurred during GLTF export:", error);
+        }, { binary: false });
+    }
+
+    exportSTL() {
+        if (typeof THREE.STLExporter === 'undefined') {
+            console.error("STLExporter is not loaded.");
+            alert("STL Exporter is not loaded yet. Please check your internet connection.");
+            return;
+        }
+
+        const exportGroup = new THREE.Group();
+        exportGroup.name = "bicycle_3d_model";
+        
+        this.meshes.forEach(mesh => {
+            const clone = mesh.clone();
+            exportGroup.add(clone);
+        });
+
+        const exporter = new THREE.STLExporter();
+        const output = exporter.parse(exportGroup);
+        this.downloadFile(output, "text/plain", "bike_frame_3d.stl");
+    }
+
+    downloadFile(content, mimeType, filename) {
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
 }
 
 window.BikeRenderer3D = BikeRenderer3D;

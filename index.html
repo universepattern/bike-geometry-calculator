@@ -14,6 +14,8 @@
     <!-- Three.js WebGL Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/STLExporter.js"></script>
 
     <!-- Stylesheet -->
     <link rel="stylesheet" href="css/styles.css">
@@ -30,194 +32,214 @@
 
                 <!-- Frame & Angles -->
                 <div class="control-group">
-                    <h3>Frame & Angles</h3>
-
-                    <div class="input-row">
-                        <label for="seatTubeLength">Seat Tube (C-C)</label>
-                        <div class="slider-container">
-                            <input type="range" id="seatTubeLength" min="450" max="650" value="540" step="1">
-                            <span class="value-display" id="seatTubeLengthVal">540</span><span class="unit">mm</span>
-                        </div>
+                    <div class="group-header">
+                        <h3>Frame & Angles</h3>
+                        <span class="toggle-icon">▼</span>
                     </div>
-
-                    <div class="input-row">
-                        <label for="effTopTubeLength">Effective Top Tube</label>
-                        <div class="slider-container">
-                            <input type="range" id="effTopTubeLength" min="480" max="650" value="550" step="1">
-                            <span class="value-display" id="effTopTubeLengthVal">550</span><span class="unit">mm</span>
+                    <div class="group-content">
+                        <div class="input-row">
+                            <label for="seatTubeLength">Seat Tube (C-C)</label>
+                            <div class="slider-container">
+                                <input type="range" id="seatTubeLength" min="450" max="650" value="540" step="1">
+                                <span class="value-display" id="seatTubeLengthVal">540</span><span class="unit">mm</span>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="input-row">
-                        <label for="seatTubeAngle">Seat Tube Angle</label>
-                        <div class="slider-container">
-                            <input type="range" id="seatTubeAngle" min="70" max="76" value="73" step="0.1">
-                            <span class="value-display" id="seatTubeAngleVal">73</span><span class="unit">°</span>
+                        <div class="input-row">
+                            <label for="effTopTubeLength">Effective Top Tube</label>
+                            <div class="slider-container">
+                                <input type="range" id="effTopTubeLength" min="480" max="650" value="550" step="1">
+                                <span class="value-display" id="effTopTubeLengthVal">550</span><span class="unit">mm</span>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="input-row">
-                        <label for="headTubeAngle">Head Tube Angle</label>
-                        <div class="slider-container">
-                            <input type="range" id="headTubeAngle" min="68" max="75" value="73" step="0.1">
-                            <span class="value-display" id="headTubeAngleVal">73</span><span class="unit">°</span>
+                        <div class="input-row">
+                            <label for="seatTubeAngle">Seat Tube Angle</label>
+                            <div class="slider-container">
+                                <input type="range" id="seatTubeAngle" min="70" max="76" value="73" step="0.1">
+                                <span class="value-display" id="seatTubeAngleVal">73</span><span class="unit">°</span>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="input-row">
-                        <label for="chainStayLength">Chainstay Length</label>
-                        <div class="slider-container">
-                            <input type="range" id="chainStayLength" min="380" max="470" value="415" step="1">
-                            <span class="value-display" id="chainStayLengthVal">415</span><span class="unit">mm</span>
+                        <div class="input-row">
+                            <label for="headTubeAngle">Head Tube Angle</label>
+                            <div class="slider-container">
+                                <input type="range" id="headTubeAngle" min="68" max="75" value="73" step="0.1">
+                                <span class="value-display" id="headTubeAngleVal">73</span><span class="unit">°</span>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="input-row">
-                        <label for="bbDrop">BB Drop</label>
-                        <div class="slider-container">
-                            <input type="range" id="bbDrop" min="40" max="90" value="70" step="1">
-                            <span class="value-display" id="bbDropVal">70</span><span class="unit">mm</span>
+                        <div class="input-row">
+                            <label for="chainStayLength">Chainstay Length</label>
+                            <div class="slider-container">
+                                <input type="range" id="chainStayLength" min="380" max="470" value="415" step="1">
+                                <span class="value-display" id="chainStayLengthVal">415</span><span class="unit">mm</span>
+                            </div>
+                        </div>
+
+                        <div class="input-row">
+                            <label for="bbDrop">BB Drop</label>
+                            <div class="slider-container">
+                                <input type="range" id="bbDrop" min="40" max="90" value="70" step="1">
+                                <span class="value-display" id="bbDropVal">70</span><span class="unit">mm</span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Fork & Wheels -->
                 <div class="control-group">
-                    <h3>Fork & Wheels</h3>
-
-                    <div class="input-row">
-                        <label for="forkRake">Fork Rake (Offset)</label>
-                        <div class="slider-container">
-                            <input type="range" id="forkRake" min="30" max="60" value="43" step="1">
-                            <span class="value-display" id="forkRakeVal">43</span><span class="unit">mm</span>
+                    <div class="group-header">
+                        <h3>Fork & Wheels</h3>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="group-content">
+                        <div class="input-row">
+                            <label for="forkRake">Fork Rake (Offset)</label>
+                            <div class="slider-container">
+                                <input type="range" id="forkRake" min="30" max="60" value="43" step="1">
+                                <span class="value-display" id="forkRakeVal">43</span><span class="unit">mm</span>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="input-row">
-                        <label for="wheelSize">Wheel Size (BSD)</label>
-                        <select id="wheelSize">
-                            <option value="622" selected>700c (622mm)</option>
-                            <option value="584">650b (584mm)</option>
-                            <option value="559">26" (559mm)</option>
-                        </select>
-                    </div>
+                        <div class="input-row">
+                            <label for="wheelSize">Wheel Size (BSD)</label>
+                            <select id="wheelSize">
+                                <option value="622" selected>700c (622mm)</option>
+                                <option value="584">650b (584mm)</option>
+                                <option value="559">26" (559mm)</option>
+                            </select>
+                        </div>
 
-                    <div class="input-row">
-                        <label for="tireWidth">Tire Width</label>
-                        <div class="slider-container">
-                            <input type="range" id="tireWidth" min="23" max="55" value="28" step="1">
-                            <span class="value-display" id="tireWidthVal">28</span><span class="unit">mm</span>
+                        <div class="input-row">
+                            <label for="tireWidth">Tire Width</label>
+                            <div class="slider-container">
+                                <input type="range" id="tireWidth" min="23" max="55" value="28" step="1">
+                                <span class="value-display" id="tireWidthVal">28</span><span class="unit">mm</span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Rider & Load -->
                 <div class="control-group">
-                    <h3>Rider & Load</h3>
-
-                    <div class="input-row">
-                        <label for="riderWeight">Rider Weight</label>
-                        <div class="slider-container">
-                            <input type="range" id="riderWeight" min="50" max="150" value="75" step="1">
-                            <span class="value-display" id="riderWeightVal">75</span><span class="unit">kg</span>
-                        </div>
+                    <div class="group-header">
+                        <h3>Rider & Load</h3>
+                        <span class="toggle-icon">▼</span>
                     </div>
-
-                    <div class="input-row">
-                        <label for="saddleSetback">Saddle Setback</label>
-                        <div class="slider-container">
-                            <input type="range" id="saddleSetback" min="0" max="50" value="10" step="1">
-                            <span class="value-display" id="saddleSetbackVal">10</span><span class="unit">mm</span>
+                    <div class="group-content">
+                        <div class="input-row">
+                            <label for="riderWeight">Rider Weight</label>
+                            <div class="slider-container">
+                                <input type="range" id="riderWeight" min="50" max="150" value="75" step="1">
+                                <span class="value-display" id="riderWeightVal">75</span><span class="unit">kg</span>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="input-row">
-                        <label for="crankLength">Crank Length</label>
-                        <div class="slider-container">
-                            <input type="range" id="crankLength" min="160" max="180" value="170" step="1">
-                            <span class="value-display" id="crankLengthVal">170</span><span class="unit">mm</span>
+                        <div class="input-row">
+                            <label for="saddleSetback">Saddle Setback</label>
+                            <div class="slider-container">
+                                <input type="range" id="saddleSetback" min="0" max="50" value="10" step="1">
+                                <span class="value-display" id="saddleSetbackVal">10</span><span class="unit">mm</span>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="input-row">
-                        <label for="powerOutput">Power Output</label>
-                        <div class="slider-container">
-                            <input type="range" id="powerOutput" min="100" max="1000" value="250" step="10">
-                            <span class="value-display" id="powerOutputVal">250</span><span class="unit">W</span>
+                        <div class="input-row">
+                            <label for="crankLength">Crank Length</label>
+                            <div class="slider-container">
+                                <input type="range" id="crankLength" min="160" max="180" value="170" step="1">
+                                <span class="value-display" id="crankLengthVal">170</span><span class="unit">mm</span>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="input-row">
-                        <label for="brakingForce">Braking Force</label>
-                        <div class="slider-container">
-                            <input type="range" id="brakingForce" min="0.1" max="2.0" value="1.0" step="0.1">
-                            <span class="value-display" id="brakingForceVal">1.0</span><span class="unit">g</span>
+                        <div class="input-row">
+                            <label for="powerOutput">Power Output</label>
+                            <div class="slider-container">
+                                <input type="range" id="powerOutput" min="100" max="1000" value="250" step="10">
+                                <span class="value-display" id="powerOutputVal">250</span><span class="unit">W</span>
+                            </div>
+                        </div>
+
+                        <div class="input-row">
+                            <label for="brakingForce">Braking Force</label>
+                            <div class="slider-container">
+                                <input type="range" id="brakingForce" min="0.1" max="2.0" value="1.0" step="0.1">
+                                <span class="value-display" id="brakingForceVal">1.0</span><span class="unit">g</span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Frame Style & Material -->
                 <div class="control-group">
-                    <h3>Style & Material</h3>
-
-                    <div class="input-row">
-                        <label for="frameType">Frame Type</label>
-                        <select id="frameType">
-                            <option value="diamond" selected>Diamond (Standard)</option>
-                            <option value="step-through">Step-Through (Low-entry)</option>
-                            <option value="split-top">Split-Top (Custom Twin)</option>
-                            <option value="cantilever">Cantilever (Cruiser)</option>
-                        </select>
+                    <div class="group-header">
+                        <h3>Style & Material</h3>
+                        <span class="toggle-icon">▼</span>
                     </div>
+                    <div class="group-content">
+                        <div class="input-row">
+                            <label for="frameType">Frame Type</label>
+                            <select id="frameType">
+                                <option value="diamond" selected>Diamond (Standard)</option>
+                                <option value="step-through">Step-Through (Low-entry)</option>
+                                <option value="split-top">Split-Top (Custom Twin)</option>
+                                <option value="cantilever">Cantilever (Cruiser)</option>
+                            </select>
+                        </div>
 
-                    <div class="input-row">
-                        <label for="handlebarStyle">Handlebar Style</label>
-                        <select id="handlebarStyle">
-                            <option value="flat" selected>Flat Bar (MTB/City)</option>
-                            <option value="drop">Drop Bar (Road/Gravel)</option>
-                            <option value="riser">Riser Bar (Comfort/Trail)</option>
-                            <option value="bullhorn">Bullhorn Bar (Fixie/Speed)</option>
-                        </select>
-                    </div>
+                        <div class="input-row">
+                            <label for="handlebarStyle">Handlebar Style</label>
+                            <select id="handlebarStyle">
+                                <option value="flat" selected>Flat Bar (MTB/City)</option>
+                                <option value="drop">Drop Bar (Road/Gravel)</option>
+                                <option value="riser">Riser Bar (Comfort/Trail)</option>
+                                <option value="bullhorn">Bullhorn Bar (Fixie/Speed)</option>
+                            </select>
+                        </div>
 
-                    <div class="input-row">
-                        <label for="frameMaterial">Material</label>
-                        <select id="frameMaterial">
-                            <option value="steel" selected>Steel (Yield: 250 MPa)</option>
-                            <option value="aluminum">Aluminum (Yield: 200 MPa)</option>
-                            <option value="carbon">Carbon (Yield: 500 MPa)</option>
-                        </select>
+                        <div class="input-row">
+                            <label for="frameMaterial">Material</label>
+                            <select id="frameMaterial">
+                                <option value="steel" selected>Steel (Yield: 250 MPa)</option>
+                                <option value="aluminum">Aluminum (Yield: 200 MPa)</option>
+                                <option value="carbon">Carbon (Yield: 500 MPa)</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Rider Fit -->
                 <div class="control-group">
-                    <h3>Rider Fit</h3>
-
-                    <div class="input-row">
-                        <label for="riderHeight">Rider Height</label>
-                        <div class="slider-container">
-                            <input type="range" id="riderHeight" min="150" max="200" value="175" step="1">
-                            <span class="value-display" id="riderHeightVal">175</span><span class="unit">cm</span>
-                        </div>
+                    <div class="group-header">
+                        <h3>Rider Fit</h3>
+                        <span class="toggle-icon">▼</span>
                     </div>
-
-                    <div class="input-row">
-                        <label for="riderInseam">Inseam</label>
-                        <div class="slider-container">
-                            <input type="range" id="riderInseam" min="70" max="90" value="80" step="1">
-                            <span class="value-display" id="riderInseamVal">80</span><span class="unit">cm</span>
+                    <div class="group-content">
+                        <div class="input-row">
+                            <label for="riderHeight">Rider Height</label>
+                            <div class="slider-container">
+                                <input type="range" id="riderHeight" min="150" max="200" value="175" step="1">
+                                <span class="value-display" id="riderHeightVal">175</span><span class="unit">cm</span>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="input-row">
-                        <label for="ridingStyle">Riding Style</label>
-                        <select id="ridingStyle">
-                            <option value="road" selected>Road</option>
-                            <option value="mtb">Mountain Bike</option>
-                            <option value="touring">Touring</option>
-                            <option value="cargo">Cargo</option>
-                        </select>
+                        <div class="input-row">
+                            <label for="riderInseam">Inseam</label>
+                            <div class="slider-container">
+                                <input type="range" id="riderInseam" min="70" max="90" value="80" step="1">
+                                <span class="value-display" id="riderInseamVal">80</span><span class="unit">cm</span>
+                            </div>
+                        </div>
+
+                        <div class="input-row">
+                            <label for="ridingStyle">Riding Style</label>
+                            <select id="ridingStyle">
+                                <option value="road" selected>Road</option>
+                                <option value="mtb">Mountain Bike</option>
+                                <option value="touring">Touring</option>
+                                <option value="cargo">Cargo</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -227,6 +249,7 @@
                 <button id="compareBtn" class="btn-secondary">Lock Reference Geometry</button>
                 <button id="exportDxfBtn" class="btn-secondary">Export as DXF (CAD)</button>
                 <button id="exportStlBtn" class="btn-secondary">Export as STL (3D Print)</button>
+                <button id="exportGltfBtn" class="btn-secondary">Export as GLTF (3D Model)</button>
                 <button id="exportCsvBtn" class="btn-secondary">Export Specs (CSV)</button>
             </div>
         </aside>
