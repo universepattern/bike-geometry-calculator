@@ -32,15 +32,47 @@ class BikeDXFExporter {
             dxf.push("  0", "TEXT", "  8", layer, " 10", p.x, " 20", p.y, " 30", 0, " 40", height, "  1", text);
         };
 
+        const frameType = this.params.frameType || 'diamond';
+
         // --- DRAW GEOMETRY ---
         // Frame Tubes
-        addLine(nodes.eTTST, nodes.htBot);
         addLine(nodes.bb, nodes.eTTST);
         addLine(nodes.htBot, nodes.htTop);
         addLine(nodes.bb, nodes.htBot);
         addLine(nodes.bb, nodes.rearAxle);
         addLine(nodes.rearAxle, nodes.eTTST);
         addLine(nodes.htBot, nodes.frontAxle);
+
+        // Top Tube based on Selected Shape Style
+        if (frameType === 'step-through') {
+            const stepThroughST = { 
+                x: nodes.bb.x + (nodes.eTTST.x - nodes.bb.x) * 0.4, 
+                y: nodes.bb.y + (nodes.eTTST.y - nodes.bb.y) * 0.4 
+            };
+            addLine(stepThroughST, nodes.htBot);
+        } else if (frameType === 'split-top') {
+            // Draw twin parallel lines offset in 2D
+            addLine({ x: nodes.eTTST.x, y: nodes.eTTST.y + 3 }, { x: nodes.htBot.x, y: nodes.htBot.y + 3 });
+            addLine({ x: nodes.eTTST.x, y: nodes.eTTST.y - 3 }, { x: nodes.htBot.x, y: nodes.htBot.y - 3 });
+        } else if (frameType === 'cantilever') {
+            // Curved top tube using segmented lines
+            const segments = 8;
+            const controlX = (nodes.eTTST.x + nodes.htBot.x) / 2;
+            const controlY = (nodes.eTTST.y + nodes.htBot.y) / 2 - 50;
+            
+            let prevPoint = nodes.eTTST;
+            for (let i = 1; i <= segments; i++) {
+                const t = i / segments;
+                const x = Math.pow(1 - t, 2) * nodes.eTTST.x + 2 * (1 - t) * t * controlX + Math.pow(t, 2) * nodes.htBot.x;
+                const y = Math.pow(1 - t, 2) * nodes.eTTST.y + 2 * (1 - t) * t * controlY + Math.pow(t, 2) * nodes.htBot.y;
+                const currPoint = { x: x, y: y };
+                addLine(prevPoint, currPoint);
+                prevPoint = currPoint;
+            }
+        } else {
+            // Standard Diamond
+            addLine(nodes.eTTST, nodes.htBot);
+        }
 
         // Wheels
         addCircle(nodes.rearAxle, metrics.wheelRadius);

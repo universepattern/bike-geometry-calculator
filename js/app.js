@@ -36,6 +36,10 @@ document.addEventListener('DOMContentLoaded', () => {
         brakingForce: document.getElementById('brakingForce'),
         frameMaterial: document.getElementById('frameMaterial'),
         
+        // Custom Styles parameters
+        frameType: document.getElementById('frameType'),
+        handlebarStyle: document.getElementById('handlebarStyle'),
+        
         // Rider Fit parameters
         riderHeight: document.getElementById('riderHeight'),
         riderInseam: document.getElementById('riderInseam'),

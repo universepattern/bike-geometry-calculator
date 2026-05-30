@@ -121,13 +121,46 @@ class BikeSTLExporter {
         };
 
         // --- MODEL BIKE FRAME TUBES ---
-        addCylinder(nodes.eTTST, nodes.htBot, tubeDiameters.topTube);
+        const frameType = this.params.frameType || 'diamond';
+        
+        // 1. Seat Tube, Head Tube, Down Tube, Chainstay, Seatstay, Fork
         addCylinder(nodes.bb, nodes.eTTST, tubeDiameters.seatTube);
         addCylinder(nodes.htBot, nodes.htTop, tubeDiameters.headTube);
         addCylinder(nodes.bb, nodes.htBot, tubeDiameters.downTube);
         addCylinder(nodes.bb, nodes.rearAxle, tubeDiameters.chainstay);
         addCylinder(nodes.rearAxle, nodes.eTTST, tubeDiameters.seatstay);
         addCylinder(nodes.htBot, nodes.frontAxle, tubeDiameters.fork);
+
+        // 2. Top Tube based on Selected Shape Style
+        if (frameType === 'step-through') {
+            const stepThroughST = { 
+                x: nodes.bb.x + (nodes.eTTST.x - nodes.bb.x) * 0.4, 
+                y: nodes.bb.y + (nodes.eTTST.y - nodes.bb.y) * 0.4 
+            };
+            addCylinder(stepThroughST, nodes.htBot, tubeDiameters.topTube);
+        } else if (frameType === 'split-top') {
+            // Twin top tubes offset on Z-axis
+            addCylinder({ x: nodes.eTTST.x, y: nodes.eTTST.y, z: -12 }, { x: nodes.htBot.x, y: nodes.htBot.y, z: -12 }, 20);
+            addCylinder({ x: nodes.eTTST.x, y: nodes.eTTST.y, z: 12 }, { x: nodes.htBot.x, y: nodes.htBot.y, z: 12 }, 20);
+        } else if (frameType === 'cantilever') {
+            // Curved top tube using segmented cylindrical lines
+            const segments = 5;
+            const controlX = (nodes.eTTST.x + nodes.htBot.x) / 2;
+            const controlY = (nodes.eTTST.y + nodes.htBot.y) / 2 - 50;
+            
+            let prevPoint = { x: nodes.eTTST.x, y: nodes.eTTST.y, z: 0 };
+            for (let i = 1; i <= segments; i++) {
+                const t = i / segments;
+                const x = Math.pow(1 - t, 2) * nodes.eTTST.x + 2 * (1 - t) * t * controlX + Math.pow(t, 2) * nodes.htBot.x;
+                const y = Math.pow(1 - t, 2) * nodes.eTTST.y + 2 * (1 - t) * t * controlY + Math.pow(t, 2) * nodes.htBot.y;
+                const currPoint = { x: x, y: y, z: 0 };
+                addCylinder(prevPoint, currPoint, tubeDiameters.topTube);
+                prevPoint = currPoint;
+            }
+        } else {
+            // Standard Diamond
+            addCylinder(nodes.eTTST, nodes.htBot, tubeDiameters.topTube);
+        }
 
         stl.push("endsolid bike_frame");
         return stl.join("\n");

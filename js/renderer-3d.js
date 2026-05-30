@@ -174,8 +174,9 @@ class BikeRenderer3D {
         return mesh;
     }
 
-    drawFrame(nodes, stresses) {
+    drawFrame(nodes, stresses, params) {
         const maxStress = 500;
+        const frameType = params ? params.frameType : 'diamond';
         
         // Materials limits color checks
         const seatColor = stresses ? this.getStressColor(Math.min(stresses.seatTubeStress, maxStress) / maxStress) : 0x00d2ff;
@@ -184,10 +185,41 @@ class BikeRenderer3D {
         const generalColor = 0x334155; // Dark slate grey for non-stress stays
 
         // --- MAIN TUBE STRUCTURES ---
-        this.createCylinderMesh(nodes.eTTST, nodes.htBot, 14, topColor);    // Top Tube
         this.createCylinderMesh(nodes.bb, nodes.eTTST, 15, seatColor);      // Seat Tube
         this.createCylinderMesh(nodes.htBot, nodes.htTop, 20, generalColor);// Head Tube
         this.createCylinderMesh(nodes.bb, nodes.htBot, 17.5, downColor);    // Down Tube
+
+        // Draw Top Tube based on Frame Shape Type
+        if (frameType === 'step-through') {
+            const stepThroughST = { 
+                x: nodes.bb.x + (nodes.eTTST.x - nodes.bb.x) * 0.4, 
+                y: nodes.bb.y + (nodes.eTTST.y - nodes.bb.y) * 0.4,
+                z: 0
+            };
+            this.createCylinderMesh(stepThroughST, nodes.htBot, 14, topColor);
+        } else if (frameType === 'split-top') {
+            // Twin parallel top tubes (smaller diameters 10mm, offset on Z axis by +/- 12mm)
+            this.createCylinderMesh({ x: nodes.eTTST.x, y: nodes.eTTST.y, z: -12 }, { x: nodes.htBot.x, y: nodes.htBot.y, z: -12 }, 10, topColor);
+            this.createCylinderMesh({ x: nodes.eTTST.x, y: nodes.eTTST.y, z: 12 }, { x: nodes.htBot.x, y: nodes.htBot.y, z: 12 }, 10, topColor);
+        } else if (frameType === 'cantilever') {
+            // Draw a curved top tube using segments to form a curved arc
+            const segments = 6;
+            const controlX = (nodes.eTTST.x + nodes.htBot.x) / 2;
+            const controlY = (nodes.eTTST.y + nodes.htBot.y) / 2 - 50; // curve down
+            
+            let prevPoint = { x: nodes.eTTST.x, y: nodes.eTTST.y, z: 0 };
+            for (let i = 1; i <= segments; i++) {
+                const t = i / segments;
+                const x = Math.pow(1 - t, 2) * nodes.eTTST.x + 2 * (1 - t) * t * controlX + Math.pow(t, 2) * nodes.htBot.x;
+                const y = Math.pow(1 - t, 2) * nodes.eTTST.y + 2 * (1 - t) * t * controlY + Math.pow(t, 2) * nodes.htBot.y;
+                const currPoint = { x: x, y: y, z: 0 };
+                this.createCylinderMesh(prevPoint, currPoint, 14, topColor);
+                prevPoint = currPoint;
+            }
+        } else {
+            // Standard Diamond
+            this.createCylinderMesh(nodes.eTTST, nodes.htBot, 14, topColor);
+        }
 
         // Bottom Bracket Shell (cylinder along Z-axis)
         this.createCylinderMesh({ x: 0, y: 0, z: -34 }, { x: 0, y: 0, z: 34 }, 22, generalColor);
@@ -204,23 +236,90 @@ class BikeRenderer3D {
         this.createCylinderMesh({ x: nodes.htBot.x, y: nodes.htBot.y, z: -15 }, { x: nodes.frontAxle.x, y: nodes.frontAxle.y, z: -50 }, 12, generalColor);
         this.createCylinderMesh({ x: nodes.htBot.x, y: nodes.htBot.y, z: 15 }, { x: nodes.frontAxle.x, y: nodes.frontAxle.y, z: 50 }, 12, generalColor);
 
-        // --- HANDLEBARS (Stem & Crossbar representation) ---
-        // 1. Stem: Extends forward from headtube top
+        // --- COCKPIT HANDLEBARS ---
+        const style = params ? params.handlebarStyle : 'flat';
+        const stemLength = 70;
+        const stemRise = 15;
         const handlebarCenter = {
-            x: nodes.htTop.x + 70,
-            y: nodes.htTop.y + 15,
+            x: nodes.htTop.x + stemLength,
+            y: nodes.htTop.y + stemRise,
             z: 0
         };
+
+        // Draw Stem
         this.createCylinderMesh(nodes.htTop, handlebarCenter, 14, 0x1e293b);
 
-        // 2. Flat Crossbar (along Z axis)
-        const leftBarEnd = { x: handlebarCenter.x, y: handlebarCenter.y, z: -300 };
-        const rightBarEnd = { x: handlebarCenter.x, y: handlebarCenter.y, z: 300 };
-        this.createCylinderMesh(leftBarEnd, rightBarEnd, 11, 0x0f172a);
-        
-        // 3. Grips
-        this.createCylinderMesh(leftBarEnd, { x: leftBarEnd.x, y: leftBarEnd.y, z: -200 }, 14, 0x020617);
-        this.createCylinderMesh(rightBarEnd, { x: rightBarEnd.x, y: rightBarEnd.y, z: 200 }, 14, 0x020617);
+        // Draw Handlebars based on selected style
+        if (style === 'flat') {
+            const leftBarEnd = { x: handlebarCenter.x, y: handlebarCenter.y, z: -300 };
+            const rightBarEnd = { x: handlebarCenter.x, y: handlebarCenter.y, z: 300 };
+            this.createCylinderMesh(leftBarEnd, rightBarEnd, 11, 0x0f172a);
+            
+            // Grips
+            this.createCylinderMesh(leftBarEnd, { x: leftBarEnd.x, y: leftBarEnd.y, z: -200 }, 14, 0x020617);
+            this.createCylinderMesh(rightBarEnd, { x: rightBarEnd.x, y: rightBarEnd.y, z: 200 }, 14, 0x020617);
+        } else if (style === 'riser') {
+            // Central clamp (Z = -50 to 50)
+            const leftClampEnd = { x: handlebarCenter.x, y: handlebarCenter.y, z: -50 };
+            const rightClampEnd = { x: handlebarCenter.x, y: handlebarCenter.y, z: 50 };
+            this.createCylinderMesh(leftClampEnd, rightClampEnd, 12, 0x0f172a);
+
+            // Riser bends (curves slightly upward by 25mm and outward)
+            const leftRiseEnd = { x: handlebarCenter.x + 10, y: handlebarCenter.y + 25, z: -100 };
+            const rightRiseEnd = { x: handlebarCenter.x + 10, y: handlebarCenter.y + 25, z: 100 };
+            this.createCylinderMesh(leftClampEnd, leftRiseEnd, 11, 0x0f172a);
+            this.createCylinderMesh(rightClampEnd, rightRiseEnd, 11, 0x0f172a);
+
+            // Bar grips ends
+            const leftBarEnd = { x: leftRiseEnd.x, y: leftRiseEnd.y, z: -320 };
+            const rightBarEnd = { x: rightRiseEnd.x, y: rightRiseEnd.y, z: 320 };
+            this.createCylinderMesh(leftRiseEnd, leftBarEnd, 11, 0x0f172a);
+            this.createCylinderMesh(rightRiseEnd, rightBarEnd, 11, 0x0f172a);
+            
+            // Grip wraps
+            this.createCylinderMesh(leftBarEnd, { x: leftBarEnd.x, y: leftBarEnd.y, z: -220 }, 14, 0x020617);
+            this.createCylinderMesh(rightBarEnd, { x: rightBarEnd.x, y: rightBarEnd.y, z: 220 }, 14, 0x020617);
+        } else if (style === 'drop') {
+            // Drop loops (extending outwards by 200mm, then curving forward and down)
+            const leftClampEnd = { x: handlebarCenter.x, y: handlebarCenter.y, z: -200 };
+            const rightClampEnd = { x: handlebarCenter.x, y: handlebarCenter.y, z: 200 };
+            this.createCylinderMesh(leftClampEnd, rightClampEnd, 12, 0x0f172a);
+
+            // Curved drops (segmented sweeps)
+            const loopSegments = 8;
+            let prevL = leftClampEnd;
+            let prevR = rightClampEnd;
+            for (let i = 1; i <= loopSegments; i++) {
+                const theta = (i / loopSegments) * Math.PI * 0.8;
+                const dx = 80 * Math.sin(theta);
+                const dy = -100 * (1 - Math.cos(theta));
+                
+                const currL = { x: leftClampEnd.x + dx, y: leftClampEnd.y + dy, z: leftClampEnd.z - 20 * Math.sin(theta) };
+                const currR = { x: rightClampEnd.x + dx, y: rightClampEnd.y + dy, z: rightClampEnd.z + 20 * Math.sin(theta) };
+                
+                this.createCylinderMesh(prevL, currL, 11, 0x0f172a);
+                this.createCylinderMesh(prevR, currR, 11, 0x0f172a);
+                prevL = currL;
+                prevR = currR;
+            }
+        } else if (style === 'bullhorn') {
+            // Flat bar out to Z = +/- 180mm, then curving forward
+            const leftClampEnd = { x: handlebarCenter.x, y: handlebarCenter.y, z: -180 };
+            const rightClampEnd = { x: handlebarCenter.x, y: handlebarCenter.y, z: 180 };
+            this.createCylinderMesh(leftClampEnd, rightClampEnd, 12, 0x0f172a);
+
+            // Horn bars forward (120mm)
+            const leftHornEnd = { x: leftClampEnd.x + 120, y: leftClampEnd.y + 10, z: leftClampEnd.z };
+            const rightHornEnd = { x: rightClampEnd.x + 120, y: rightClampEnd.y + 10, z: rightClampEnd.z };
+            this.createCylinderMesh(leftClampEnd, leftHornEnd, 11, 0x0f172a);
+            this.createCylinderMesh(rightClampEnd, rightHornEnd, 11, 0x0f172a);
+
+            // Horn tips upturns (30mm)
+            const leftHornUp = { x: leftHornEnd.x + 30, y: leftHornEnd.y + 25, z: leftHornEnd.z };
+            const rightHornUp = { x: rightHornEnd.x + 30, y: rightHornEnd.y + 25, z: rightHornEnd.z };
+            this.createCylinderMesh(leftHornEnd, leftHornUp, 11, 0x0f172a);
+            this.createCylinderMesh(rightHornEnd, rightHornUp, 11, 0x0f172a);
+        }
     }
 
     drawWheels(nodes, params) {
@@ -292,6 +391,7 @@ class BikeRenderer3D {
 
     render(geometry, params) {
         this.clear();
+        this.params = params; // store locally for drawFrame / drawWheels calls
         
         const nodes = geometry.nodes;
         const wheelRadius = (params.wheelSize / 2) + params.tireWidth;
@@ -300,7 +400,7 @@ class BikeRenderer3D {
         this.gridHelper.position.y = nodes.rearAxle.y - wheelRadius;
 
         // Draw 3D elements
-        this.drawFrame(nodes, geometry.stresses);
+        this.drawFrame(nodes, geometry.stresses, params);
         this.drawWheels(nodes, params);
 
         // Adjust Orbit Control targets around the bike geometry midpoint

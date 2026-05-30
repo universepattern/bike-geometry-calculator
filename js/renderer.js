@@ -47,6 +47,19 @@ class BikeRenderer {
         return line;
     }
 
+    createPath(d, cssClass, id = null) {
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', d);
+        path.setAttribute('class', cssClass);
+        path.setAttribute('fill', 'none');
+        if (id) {
+            path.setAttribute('data-id', id);
+            if (!this.elementMap[id]) this.elementMap[id] = [];
+            this.elementMap[id].push(path);
+        }
+        return path;
+    }
+
     createCircle(center, radius, cssClass, id = null) {
         const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         circle.setAttribute('cx', center.x);
@@ -136,7 +149,9 @@ class BikeRenderer {
             crankLength: ['tube-chainstay'],
             powerOutput: ['tube-seat', 'tube-down'],
             brakingForce: ['tube-fork', 'tube-head'],
-            frameMaterial: ['tube-seat', 'tube-down', 'tube-top']
+            frameMaterial: ['tube-seat', 'tube-down', 'tube-top'],
+            frameType: ['tube-top', 'tube-seat'],
+            handlebarStyle: ['cockpit-stem', 'cockpit-bar']
         };
 
         const resolvedIds = [];
@@ -287,7 +302,10 @@ class BikeRenderer {
     }
 
     drawTubes(nodes, isComparison = false) {
+        const p = isComparison ? this.comparisonParams : this.params;
+        const frameType = p ? p.frameType : 'diamond';
         const groupId = isComparison ? 'comparison' : 'main';
+
         const drawTube = (p1, p2, id) => {
             const line1 = this.createLine(p1, p2, 'tube-outline', `${groupId}-${id}`);
             const line2 = this.createLine(p1, p2, 'tube-inner', `${groupId}-${id}`);
@@ -301,7 +319,20 @@ class BikeRenderer {
             this.tubesGroup.appendChild(line2);
         };
 
-        drawTube(nodes.eTTST, nodes.htBot, 'tube-top');
+        const drawCurvedTube = (d, id) => {
+            const path1 = this.createPath(d, 'tube-outline', `${groupId}-${id}`);
+            const path2 = this.createPath(d, 'tube-inner', `${groupId}-${id}`);
+            if (isComparison) {
+                path1.setAttribute('stroke-dasharray', '5,5');
+                path2.setAttribute('stroke-dasharray', '5,5');
+                path1.setAttribute('opacity', '0.7');
+                path2.setAttribute('opacity', '0.7');
+            }
+            this.tubesGroup.appendChild(path1);
+            this.tubesGroup.appendChild(path2);
+        };
+
+        // Standard Frame Linkages
         drawTube(nodes.bb, nodes.eTTST, 'tube-seat');
         drawTube(nodes.htBot, nodes.htTop, 'tube-head');
         drawTube(nodes.bb, nodes.htBot, 'tube-down');
@@ -309,12 +340,89 @@ class BikeRenderer {
         drawTube(nodes.rearAxle, nodes.eTTST, 'tube-seatstay');
         drawTube(nodes.htBot, nodes.frontAxle, 'tube-fork');
 
+        // Draw Top Tube based on Frame Shape Type
+        if (frameType === 'step-through') {
+            const stepThroughST = { 
+                x: nodes.bb.x + (nodes.eTTST.x - nodes.bb.x) * 0.4, 
+                y: nodes.bb.y + (nodes.eTTST.y - nodes.bb.y) * 0.4 
+            };
+            drawTube(stepThroughST, nodes.htBot, 'tube-top');
+        } else if (frameType === 'cantilever') {
+            const controlX = (nodes.eTTST.x + nodes.htBot.x) / 2;
+            const controlY = (nodes.eTTST.y + nodes.htBot.y) / 2 - 50; // curve downwards
+            const d = `M ${nodes.eTTST.x} ${nodes.eTTST.y} Q ${controlX} ${controlY} ${nodes.htBot.x} ${nodes.htBot.y}`;
+            drawCurvedTube(d, 'tube-top');
+        } else {
+            // diamond or split-top (looks identical in flat 2D side projection)
+            drawTube(nodes.eTTST, nodes.htBot, 'tube-top');
+        }
+
         for (const [key, node] of Object.entries(nodes)) {
             const circle = this.createCircle(node, 3, 'node-point', `${groupId}-${key}`);
             if (isComparison) {
                 circle.setAttribute('opacity', '0.7');
             }
             this.tubesGroup.appendChild(circle);
+        }
+    }
+
+    drawCockpit(nodes, params, isComparison = false) {
+        if (!params) return;
+        const groupId = isComparison ? 'comparison' : 'main';
+        const style = params.handlebarStyle || 'flat';
+        
+        const stemLength = 60;
+        const stemRise = 15;
+        const hbCenter = {
+            x: nodes.htTop.x + stemLength,
+            y: nodes.htTop.y + stemRise
+        };
+
+        // Draw Stem representation
+        const stem = this.createLine(nodes.htTop, hbCenter, 'tube-inner', `${groupId}-cockpit-stem`);
+        stem.setAttribute('stroke-width', '10');
+        if (isComparison) {
+            stem.setAttribute('opacity', '0.7');
+            stem.setAttribute('stroke-dasharray', '3,3');
+        }
+        this.tubesGroup.appendChild(stem);
+
+        // Draw Handlebars representation
+        if (style === 'flat') {
+            const bar = this.createCircle(hbCenter, 8, 'tube-inner', `${groupId}-cockpit-bar`);
+            bar.setAttribute('fill', '#0f172a');
+            if (isComparison) bar.setAttribute('opacity', '0.7');
+            this.tubesGroup.appendChild(bar);
+        } else if (style === 'riser') {
+            const riserCenter = { x: hbCenter.x + 10, y: hbCenter.y + 20 };
+            const riserLine = this.createLine(hbCenter, riserCenter, 'tube-inner', `${groupId}-cockpit-riser`);
+            riserLine.setAttribute('stroke-width', '8');
+            const bar = this.createCircle(riserCenter, 8, 'tube-inner', `${groupId}-cockpit-bar`);
+            bar.setAttribute('fill', '#0f172a');
+            if (isComparison) {
+                riserLine.setAttribute('opacity', '0.7');
+                bar.setAttribute('opacity', '0.7');
+            }
+            this.tubesGroup.appendChild(riserLine);
+            this.tubesGroup.appendChild(bar);
+        } else if (style === 'drop') {
+            const d = `M ${hbCenter.x} ${hbCenter.y} C ${hbCenter.x + 40} ${hbCenter.y} ${hbCenter.x + 50} ${hbCenter.y - 50} ${hbCenter.x + 20} ${hbCenter.y - 70}`;
+            const path = this.createPath(d, 'tube-inner', `${groupId}-cockpit-bar`);
+            path.setAttribute('stroke-width', '8');
+            if (isComparison) {
+                path.setAttribute('opacity', '0.7');
+                path.setAttribute('stroke-dasharray', '3,3');
+            }
+            this.tubesGroup.appendChild(path);
+        } else if (style === 'bullhorn') {
+            const d = `M ${hbCenter.x} ${hbCenter.y} L ${hbCenter.x + 50} ${hbCenter.y} L ${hbCenter.x + 60} ${hbCenter.y + 20}`;
+            const path = this.createPath(d, 'tube-inner', `${groupId}-cockpit-bar`);
+            path.setAttribute('stroke-width', '8');
+            if (isComparison) {
+                path.setAttribute('opacity', '0.7');
+                path.setAttribute('stroke-dasharray', '3,3');
+            }
+            this.tubesGroup.appendChild(path);
         }
     }
 
@@ -482,9 +590,12 @@ class BikeRenderer {
         const nodes = geometry.nodes;
         
         this.drawTubes(nodes);
+        this.drawCockpit(nodes, params);
         this.drawWheels(nodes, params);
+        
         if (this.comparisonMode && this.comparisonGeometry) {
             this.drawTubes(this.comparisonGeometry.nodes, true);
+            this.drawCockpit(this.comparisonGeometry.nodes, this.comparisonParams, true);
             this.drawWheels(this.comparisonGeometry.nodes, this.comparisonParams, true);
         }
         if (geometry.forces) {

@@ -28,6 +28,10 @@ class BikeGeometry {
             brakingForce: 1.0,     // g (deceleration multiplier)
             frameMaterial: "steel", // steel, aluminum, carbon
             
+            // Frame & Handlebar custom styles
+            frameType: "diamond",       // diamond, step-through, split-top, cantilever
+            handlebarStyle: "flat",    // flat, drop, riser, bullhorn
+
             // Rider Fit parameters
             riderHeight: 175,      // cm
             riderInseam: 80,       // cm
@@ -204,33 +208,52 @@ class BikeGeometry {
 
         // Calculate stresses for each tube
         const seatTubeLength = p.seatTubeLength / 1000; // Convert to meters
-        const seatTubeStress = calculateBendingStress(
+        let seatTubeStress = calculateBendingStress(
             forces.seatTubeForce,
             seatTubeLength * 1000, // Convert back to mm for consistency
             tubeDimensions.seatTube.outerDiameter,
             tubeDimensions.seatTube.wallThickness
         );
+        if (p.frameType === "step-through") {
+            seatTubeStress *= 1.3; // lower reinforcement
+        }
 
         const downTubeLength = Math.hypot(
             this.result.nodes.htBot.x - this.result.nodes.bb.x,
             this.result.nodes.htBot.y - this.result.nodes.bb.y
         ) / 1000; // Convert to meters
         const downTubeForce = forces.headTubeForce * 0.7; // Approximate distribution
-        const downTubeStress = calculateBendingStress(
+        let downTubeStress = calculateBendingStress(
             downTubeForce,
             downTubeLength * 1000,
             tubeDimensions.downTube.outerDiameter,
             tubeDimensions.downTube.wallThickness
         );
+        if (p.frameType === "step-through") {
+            downTubeStress *= 1.45; // significantly higher load on down tube in step-through
+        }
 
         const topTubeLength = p.effTopTubeLength / 1000;
         const topTubeForce = forces.seatTubeForce * 0.3; // Approximate distribution
-        const topTubeStress = calculateBendingStress(
-            topTubeForce,
-            topTubeLength * 1000,
-            tubeDimensions.topTube.outerDiameter,
-            tubeDimensions.topTube.wallThickness
-        );
+        let topTubeStress = 0;
+        
+        if (p.frameType === "split-top") {
+            // Twin top tubes share the load, but each has a smaller diameter (e.g. 16mm, thickness 1.2mm)
+            const I_twin = calculateMomentOfInertia(16, 1.2);
+            const M = (topTubeForce / 2) * (topTubeLength);
+            const y = (16 / 2) / 1000;
+            topTubeStress = (M * y / I_twin) / 1e6;
+        } else {
+            topTubeStress = calculateBendingStress(
+                topTubeForce,
+                topTubeLength * 1000,
+                tubeDimensions.topTube.outerDiameter,
+                tubeDimensions.topTube.wallThickness
+            );
+            if (p.frameType === "cantilever") {
+                topTubeStress *= 1.25; // curved tubes experience higher stress concentration
+            }
+        }
 
         return {
             seatTubeStress: seatTubeStress,
