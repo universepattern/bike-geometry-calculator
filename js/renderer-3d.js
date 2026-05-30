@@ -242,16 +242,23 @@ class BikeRenderer3D {
             { x: nodes.rearAxle.x, y: nodes.rearAxle.y, z: 68 },
             10, hubColor
         );
-        // Spokes approximation (simple cross line cylinders)
-        for (let i = 0; i < 4; i++) {
-            const angle = (i * Math.PI) / 4;
+        // Flange rims
+        this.createCylinderMesh({ x: nodes.rearAxle.x, y: nodes.rearAxle.y, z: -25 }, { x: nodes.rearAxle.x, y: nodes.rearAxle.y, z: -23 }, 22, hubColor);
+        this.createCylinderMesh({ x: nodes.rearAxle.x, y: nodes.rearAxle.y, z: 23 }, { x: nodes.rearAxle.x, y: nodes.rearAxle.y, z: 25 }, 22, hubColor);
+
+        // 3D Dished Spokes (24 alternating spokes from hub flanges to rim center)
+        const rearSpokes = 24;
+        const rearFlangeZ = 24;
+        for (let i = 0; i < rearSpokes; i++) {
+            const angle = (2 * Math.PI * i) / rearSpokes;
             const cos = Math.cos(angle) * rimRadius;
             const sin = Math.sin(angle) * rimRadius;
-            this.createCylinderMesh(
-                { x: nodes.rearAxle.x - cos, y: nodes.rearAxle.y - sin, z: 0 },
-                { x: nodes.rearAxle.x + cos, y: nodes.rearAxle.y + sin, z: 0 },
-                1.5, 0xd8dee9
-            );
+            
+            const rimPoint = { x: nodes.rearAxle.x + cos, y: nodes.rearAxle.y + sin, z: 0 };
+            const hubZ = (i % 2 === 0) ? -rearFlangeZ : rearFlangeZ;
+            const hubPoint = { x: nodes.rearAxle.x, y: nodes.rearAxle.y, z: hubZ };
+            
+            this.createCylinderMesh(hubPoint, rimPoint, 1.0, 0xd8dee9);
         }
 
         // --- FRONT WHEEL ---
@@ -263,16 +270,23 @@ class BikeRenderer3D {
             { x: nodes.frontAxle.x, y: nodes.frontAxle.y, z: 52 },
             10, hubColor
         );
-        // Spokes approximation
-        for (let i = 0; i < 4; i++) {
-            const angle = (i * Math.PI) / 4;
+        // Flange rims
+        this.createCylinderMesh({ x: nodes.frontAxle.x, y: nodes.frontAxle.y, z: -21 }, { x: nodes.frontAxle.x, y: nodes.frontAxle.y, z: -19 }, 22, hubColor);
+        this.createCylinderMesh({ x: nodes.frontAxle.x, y: nodes.frontAxle.y, z: 19 }, { x: nodes.frontAxle.x, y: nodes.frontAxle.y, z: 21 }, 22, hubColor);
+
+        // 3D Dished Spokes (24 alternating spokes)
+        const frontSpokes = 24;
+        const frontFlangeZ = 20;
+        for (let i = 0; i < frontSpokes; i++) {
+            const angle = (2 * Math.PI * i) / frontSpokes;
             const cos = Math.cos(angle) * rimRadius;
             const sin = Math.sin(angle) * rimRadius;
-            this.createCylinderMesh(
-                { x: nodes.frontAxle.x - cos, y: nodes.frontAxle.y - sin, z: 0 },
-                { x: nodes.frontAxle.x + cos, y: nodes.frontAxle.y + sin, z: 0 },
-                1.5, 0xd8dee9
-            );
+            
+            const rimPoint = { x: nodes.frontAxle.x + cos, y: nodes.frontAxle.y + sin, z: 0 };
+            const hubZ = (i % 2 === 0) ? -frontFlangeZ : frontFlangeZ;
+            const hubPoint = { x: nodes.frontAxle.x, y: nodes.frontAxle.y, z: hubZ };
+            
+            this.createCylinderMesh(hubPoint, rimPoint, 1.0, 0xd8dee9);
         }
     }
 
