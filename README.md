@@ -1,29 +1,64 @@
-# Bike Geometry Calculator
+# Bike Geometry Calculator with Physics Engine
 
-An interactive web application that dynamically renders custom bicycle frame geometry. 
+An interactive, offline-first web application designed for custom bicycle frame design, biomechanical fit modeling, and structural stress analysis. 
 
 🌍 **[Live Demo: Run the Bike Geometry Calculator Online](https://universepattern.github.io/bike-geometry-calculator/)**
 
-## Projects in this Suite
+---
 
-### 1. Interactive Geometry Calculator (Current)
-A modern web application built with Vanilla JS and SVG. 
-- **Real-Time Visualizer**: Instantly see your bicycle frame diagram update.
-- **Interactive Highlighting**: Neon glows emphasize the linkage you are currently editing.
-- **Export Technical Plan**: Generates high-resolution PNG maps with full BOM and dimension lines.
+## Key Features
 
-### 2. Legacy PostScript Engine (Found in `legacy-engine/`)
-The original programmatic drawing tool that served as the mathematical foundation for this project.
-- **Mathematical Core**: Foundational structural logic used to draw bicycle wireframes.
-- **Vector Plotting**: Natively compiles PostScript operations to plot parameters into `.ps` and `.pdf` technical documents.
-- **Historical Reference**: Includes the classic `exampleOutput.pdf` produced by the original engine.
+### 1. Interactive Geometry Design
+- **Real-Time Visualizer**: Instantly see your bicycle frame update as you adjust tube lengths, angles, and offsets.
+- **Biomechanical Fit & Ride Presets**: Adjust rider height, inseam, and choose between riding styles (Road, MTB, Touring, Cargo) for dynamic geometry evaluation.
+- **Interactive Linkage Highlighting**: Neon glow indicators highlight individual frame elements when hovering or focusing on their respective sliders.
 
-## Usage
-### Web Application
-Simply open `index.html` in any modern web browser. It operates entirely offline.
+### 2. Physics & Load Telemetry
+- **Rider Load Distribution**: Models static load distribution (typically 60% rear, 40% front) based on rider weight.
+- **Dynamic Deceleration Forces**: Calculates axle load shifts and head tube force loading under heavy braking (configurable from 0.1g to 2.0g deceleration).
+- **BB Pedaling Torque**: Computes rotational torque loads at the Bottom Bracket using the power output (Watts) and cadence angular velocity.
+- **Beam Bending Stresses**: Employs hollow tube moment of inertia equations to calculate bending stress levels in megapascals (MPa) across the seat tube, top tube, and down tube.
+- **Handling Stability Rating**: Computes a handling score (0-10) based on the ratio of trail-to-wheelbase.
 
-### Legacy Engine
-The legacy files can be found in the `legacy-engine/` directory. Use the provided `Makefile` to generate drawings if you have a PostScript environment (like Ghostscript) installed.
+### 3. SVG Heatmaps & Vector Visualizations
+- **Stress Heatmaps**: Tube interiors shift dynamically from green (safe) to red (high stress) based on material yield limits (Steel: 250 MPa, Aluminum: 200 MPa, Carbon: 500 MPa).
+- **Vector Overlays**: Renders SVG arrows representing linear loads (rider weight, braking forces) and rotational torque paths.
+- **Engineering Optimization Hints**: Displays structural warning notes directly on the blueprint if tube safety factors drop below 1.5 or handling stability is poor.
+
+### 4. Technical Export Formats
+- 📷 **Export Technical Image (PNG)**: Renders a high-resolution plan view of the frame overlaying a custom bill of materials (BOM) spec block.
+- 📐 **Export DXF (CAD)**: Exports a standard AutoCAD-compatible DXF wireframe file grouped into organized layers (`Tubes`, `Wheels`, `Rims`, `Annotations`).
+- 🖨️ **Export STL (3D Print)**: Exports an ASCII STL model representing the frame as solid 3D cylinders, ready for importing into 3D printing slicer software.
+- 📊 **Export Specs (CSV)**: Compiles all input parameters, 2D Cartesian nodes coordinates, and computed force/stress specs into a tabular sheet format.
 
 ---
-Deployment is supported via GitHub Pages.
+
+## Directory Structure
+
+```
+bike-geometry-calculator/
+├── index.html                  # Main dashboard layout and user controls
+├── css/
+│   └── styles.css              # Dark-mode dashboard styling and animations
+├── js/
+│   ├── app.js                  # Main controller (events, parameter mapping, exports)
+│   ├── geometry.js             # Physics engine (forces, torques, stresses, stability)
+│   ├── renderer.js             # SVG graphics (render, stress heatmaps, vectors, BOM)
+│   ├── dxf-exporter.js         # DXF vector format generator
+│   ├── stl-exporter.js         # cylindrical 3D mesh STL format generator
+│   └── csv-exporter.js         # Tabular data CSV format generator
+└── README.md                   # Project documentation
+```
+
+---
+
+## Usage
+
+### Running Locally
+Open `index.html` in any web browser. The application runs entirely client-side and requires no local server, database, or internet connection.
+
+### Legacy PostScript Engine
+For historical reference, the mathematically equivalent PostScript engine used in the initial design phases of this calculator is preserved in the `legacy-engine/` directory. If you have Ghostscript installed, use the provided `Makefile` to compile drawings.
+
+---
+*Deployment is configured via GitHub Pages.*
