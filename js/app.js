@@ -11,6 +11,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const renderer = new window.BikeRenderer('bikeSvg');
     
+    let renderer3d = null;
+    if (typeof window.BikeRenderer3D !== 'undefined') {
+        renderer3d = new window.BikeRenderer3D('canvas3dWrapper');
+    }
+    
     const inputs = {
         // Geometric parameters
         seatTubeLength: document.getElementById('seatTubeLength'),
@@ -54,16 +59,13 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const [key, el] of Object.entries(inputs)) {
             if (!el) continue;
             
-            // Check if select or input range
             if (el.tagName === 'SELECT') {
-                // If it's a number (like wheelSize), parse it, otherwise keep string
                 const numVal = parseFloat(el.value);
                 params[key] = isNaN(numVal) ? el.value : numVal;
             } else {
                 params[key] = parseFloat(el.value);
             }
             
-            // Update the slider value badge if it exists
             const valLabel = document.getElementById(`${key}Val`);
             if (valLabel) valLabel.textContent = el.value;
         }
@@ -76,6 +78,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const result = geom.calculate();
         
         renderer.render(result, params);
+        
+        if (renderer3d) {
+            renderer3d.render(result, params);
+        }
         
         // Save these for DXF export
         window.currentGeometry = result;
@@ -226,6 +232,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 compareBtn.style.color = "var(--text-main)";
             }
             doRender();
+        });
+    }
+
+    // View Toggle Handlers (2D Blueprint / 3D Viewport)
+    const view2dBtn = document.getElementById('view2dBtn');
+    const view3dBtn = document.getElementById('view3dBtn');
+    const canvasWrapper = document.getElementById('canvasWrapper');
+    const canvas3dWrapper = document.getElementById('canvas3dWrapper');
+
+    if (view2dBtn && view3dBtn && canvasWrapper && canvas3dWrapper) {
+        view2dBtn.addEventListener('click', () => {
+            view2dBtn.classList.add('active');
+            view3dBtn.classList.remove('active');
+            canvasWrapper.style.display = 'block';
+            canvas3dWrapper.style.display = 'none';
+        });
+
+        view3dBtn.addEventListener('click', () => {
+            view3dBtn.classList.add('active');
+            view2dBtn.classList.remove('active');
+            canvas3dWrapper.style.display = 'block';
+            canvasWrapper.style.display = 'none';
+            
+            // Re-render and resize the 3D scene on show to match coordinates
+            if (renderer3d) {
+                renderer3d.resize();
+            }
         });
     }
 

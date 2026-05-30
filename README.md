@@ -13,19 +13,26 @@ An interactive, offline-first web application designed for custom bicycle frame 
 - **Biomechanical Fit & Ride Presets**: Adjust rider height, inseam, and choose between riding styles (Road, MTB, Touring, Cargo) for dynamic geometry evaluation.
 - **Interactive Linkage Highlighting**: Neon glow indicators highlight individual frame elements when hovering or focusing on their respective sliders.
 
-### 2. Physics & Load Telemetry
+### 2. Interactive 3D WebGL Viewport (New)
+- **Real-Time 3D Rendering**: Toggle instantly between the 2D blueprint and a full 3D perspective viewport powered by Three.js.
+- **Realistic Anatomy**: Renders symmetric chainstay/seatstay pairs and double fork blades in 3D space for actual clearance representation.
+- **Handlebars & Cockpit**: Extends the stem and flat handlebars with grip details to visualize the riding position.
+- **3D FEA Stress Heatmap**: Projects dynamic bending stress colors directly onto the 3D tube cylinders.
+- **Orbit Navigation**: Drag to rotate, scroll to zoom, and right-click drag to pan the camera around the model.
+
+### 3. Physics & Load Telemetry
 - **Rider Load Distribution**: Models static load distribution (typically 60% rear, 40% front) based on rider weight.
 - **Dynamic Deceleration Forces**: Calculates axle load shifts and head tube force loading under heavy braking (configurable from 0.1g to 2.0g deceleration).
 - **BB Pedaling Torque**: Computes rotational torque loads at the Bottom Bracket using the power output (Watts) and cadence angular velocity.
 - **Beam Bending Stresses**: Employs hollow tube moment of inertia equations to calculate bending stress levels in megapascals (MPa) across the seat tube, top tube, and down tube.
 - **Handling Stability Rating**: Computes a handling score (0-10) based on the ratio of trail-to-wheelbase.
 
-### 3. SVG Heatmaps & Vector Visualizations
+### 4. SVG Heatmaps & Vector Visualizations
 - **Stress Heatmaps**: Tube interiors shift dynamically from green (safe) to red (high stress) based on material yield limits (Steel: 250 MPa, Aluminum: 200 MPa, Carbon: 500 MPa).
 - **Vector Overlays**: Renders SVG arrows representing linear loads (rider weight, braking forces) and rotational torque paths.
 - **Engineering Optimization Hints**: Displays structural warning notes directly on the blueprint if tube safety factors drop below 1.5 or handling stability is poor.
 
-### 4. Technical Export Formats
+### 5. Technical Export Formats
 - 📷 **Export Technical Image (PNG)**: Renders a high-resolution plan view of the frame overlaying a custom bill of materials (BOM) spec block.
 - 📐 **Export DXF (CAD)**: Exports a standard AutoCAD-compatible DXF wireframe file grouped into organized layers (`Tubes`, `Wheels`, `Rims`, `Annotations`).
 - 🖨️ **Export STL (3D Print)**: Exports an ASCII STL model representing the frame as solid 3D cylinders, ready for importing into 3D printing slicer software.
@@ -44,6 +51,7 @@ bike-geometry-calculator/
 │   ├── app.js                  # Main controller (events, parameter mapping, exports)
 │   ├── geometry.js             # Physics engine (forces, torques, stresses, stability)
 │   ├── renderer.js             # SVG graphics (render, stress heatmaps, vectors, BOM)
+│   ├── renderer-3d.js          # WebGL 3D scene (Three.js rendering, stays, handlebars)
 │   ├── dxf-exporter.js         # DXF vector format generator
 │   ├── stl-exporter.js         # cylindrical 3D mesh STL format generator
 │   └── csv-exporter.js         # Tabular data CSV format generator

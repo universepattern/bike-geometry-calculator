@@ -11,6 +11,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
 
+    <!-- Three.js WebGL Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
     <!-- Stylesheet -->
     <link rel="stylesheet" href="css/styles.css">
 </head>
@@ -209,6 +213,11 @@
 
         <!-- Visualization Canvas -->
         <main class="canvas-area">
+            <div class="view-toggle-bar">
+                <button id="view2dBtn" class="toggle-btn active">2D Blueprint</button>
+                <button id="view3dBtn" class="toggle-btn">3D Viewport</button>
+            </div>
+
             <div class="canvas-wrapper" id="canvasWrapper">
                 <!-- SVG dynamically generated here -->
                 <svg id="bikeSvg" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
@@ -227,6 +236,10 @@
                     <!-- Non-flipped overlay for text / BOM -->
                     <g id="overlayGroup"></g>
                 </svg>
+            </div>
+
+            <div class="canvas-wrapper" id="canvas3dWrapper" style="display: none;">
+                <!-- WebGL Canvas will be dynamically appended here -->
             </div>
 
             <!-- Info Panel -->
@@ -274,6 +287,7 @@
     <!-- Scripts -->
     <script src="js/geometry.js"></script>
     <script src="js/renderer.js"></script>
+    <script src="js/renderer-3d.js"></script>
     <script src="js/dxf-exporter.js"></script>
     <script src="js/stl-exporter.js"></script>
     <script src="js/csv-exporter.js"></script>
